@@ -22,17 +22,10 @@ let io = require('socket.io')(http);
 const Sequelize = require('sequelize');
 
 const env = require('./Environment');
-const Cons = require((env() === 'PROD') ? '/home/ubuntu/.ssh/Constants' : './Constants');
-
-// Redis
-// const redis = require('socket.io-redis');
-// io.adapter(redis({ host: 'localhost', port: 6379 }));
+const Cons = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : './Constants');
 
 // Database
-const db = ((env() === 'PROD') 
-    ? new Sequelize(Cons.DB_PROD_SEQ.db, Cons.DB_PROD_SEQ.user, Cons.DB_PROD_SEQ.password, Cons.DB_PROD_SEQ.params)
-    : new Sequelize(Cons.DB_SIM_SEQ.db, Cons.DB_SIM_SEQ.user, Cons.DB_SIM_SEQ.password, Cons.DB_SIM_SEQ.params)
-    );
+const db = new Sequelize(Cons.DB_SEQ.db, Cons.DB_SEQ.user, Cons.DB_SEQ.password, Cons.DB_SEQ.params)
 
 // Test DB
 db.authenticate()
@@ -133,23 +126,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    /*socket.on('disconnect', async function (username) {
-        // await User.findOneAndUpdate({name: username}, {connected: false}, {new: true});
-        // socket.emit('user-changed', {
-        //     user: socket.username,
-        //     event: 'left'
-        // })
-    });
-  
-    socket.on('set-username', async (username) => {
-        // socket.username = username;
-        // await User.findOneAndUpdate({name: username}, {connected: true}, {new: true});
-        // socket.emit('users-changed', {
-        //     user: username,
-        //     event: 'joined'
-        // });
-    });*/
-
     socket.on('add-message', async (message) => {
         console.log('message', message);
         let msgSaved = await Message.create(message).catch(err => console.log('err', err));
@@ -199,56 +175,36 @@ io.on('connection', (socket) => {
 http.listen(3001);
 
 switch (env()) {
-    // Non TLS - Simulation
-    case 'SIM':
+    // Local, Non TLS
+    case 'LOCAL':
         app.listen(3000);
-        console.log('Back-end (Simulation) running on port 3000');
+        console.log('Back-end (Non-SSL) running on port 3000');
         break;
-    // TLS - Production
-    case 'PROD':
-        try {
-            const privateKey = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/privkey.pem', 'utf8');
-            const certificate = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/cert.pem', 'utf8');
-            const ca = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/chain.pem', 'utf8');
-            const credentials = {
-                key: privateKey,
-                cert: certificate,
-                ca: ca
-            };
-            const httpsServer = https.createServer(credentials, app);
-            httpsServer.listen(3000, () => {
-                console.log('Back-end (Production, SSL) running on port 3000');
-            });
-        } catch (err) {
-            console.log('Certificate not found. Is NodeJs running at AWS? ', err);
-        }
+    // AWS, TLS
+    case 'AWS':
+        app.listen(3000);
+        console.log('Back-end (Non-SSL yet) running on port 3000');
+        // try {
+        //     const privateKey = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/privkey.pem', 'utf8');
+        //     const certificate = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/cert.pem', 'utf8');
+        //     const ca = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/chain.pem', 'utf8');
+        //     const credentials = {
+        //         key: privateKey,
+        //         cert: certificate,
+        //         ca: ca
+        //     };
+        //     const httpsServer = https.createServer(credentials, app);
+        //     httpsServer.listen(3000, () => {
+        //         console.log('Back-end (SSL) running on port 3000');
+        //     });
+        // } catch (err) {
+        //     console.log('Certificate not found. Is NodeJs running at AWS? ', err);
+        // }
         break;
     default:
         console.log('No environment to run the back-end');
         break;
 }
-
-
-// Non TLS (Simulation)
-// app.listen(3000);
-
-//TLS @ AWS (Production)
-// try {
-// const privateKey = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/privkey.pem', 'utf8');
-// const certificate = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/cert.pem', 'utf8');
-// const ca = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/chain.pem', 'utf8');
-// const credentials = {
-//         key: privateKey,
-//         cert: certificate,
-//         ca: ca
-// };
-// const httpsServer = https.createServer(credentials, app);
-// httpsServer.listen(3000, () => {
-//     console.log('HTTPS server running on port 3000');
-// });
-// } catch (err) {
-//     console.log ('Certificate not found. Is NodeJs running at AWS? ', err);
-// }
 
 module.exports = app;
 

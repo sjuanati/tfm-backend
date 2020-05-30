@@ -9,15 +9,15 @@ const multer = require('multer');
 const logger = require('../controllers/logRecorder');
 
 const env = require('../Environment');
-const Constants = require((env() === 'PROD') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
+const Constants = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
 
 
 // DB connection params
-const pool = new pg.Pool((env() === 'PROD') ? Constants.DB_PROD : Constants.DB_SIM);
+const pool = new pg.Pool(Constants.DB);
 
 // S3 connection params
-const s3 = new AWS.S3((env() === 'PROD') ? Constants.S3_PROD : Constants.S3_SIM);
-const bucket = ((env() === 'PROD') ? Constants.S3_BUCKET_PROD : Constants.S3_BUCKET_SIM);
+const s3 = new AWS.S3(Constants.S3);
+const bucket = (Constants.S3_BUCKET);
 
 // Add additional information into logs, such as user_id, order_id or pharmacy_id
 let logExtra = '';
