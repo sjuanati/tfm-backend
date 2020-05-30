@@ -1,0 +1,42 @@
+{
+  "name": "tfmbackend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sjuanati/TFMBackEnd.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sjuanati/TFMBackEnd/issues"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.682.0",
+    "axios": "^0.19.2",
+    "bcrypt": "^4.0.1",
+    "cookie-parser": "~1.4.4",
+    "debug": "~2.6.9",
+    "express": "^4.17.1",
+    "http-errors": "~1.6.3",
+    "https": "^1.0.0",
+    "jade": "~1.11.0",
+    "jwt-simple": "^0.5.6",
+    "moment": "^2.26.0",
+    "morgan": "~1.9.1",
+    "multer": "^1.4.2",
+    "path": "^0.12.7",
+    "pg": "^7.18.2",
+    "pg-copy-streams": "^2.2.2",
+    "pg-hstore": "^2.3.3",
+    "secure-random": "^1.1.2",
+    "sequelize": "^5.21.10",
+    "socket.io": "^2.3.0",
+    "socket.io-redis": "^5.2.0"
+  },
+  "homepage": "https://github.com/sjuanati/TFMBackEnd#readme"
+}
