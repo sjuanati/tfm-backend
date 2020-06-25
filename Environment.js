@@ -1,10 +1,10 @@
 const env = () => {
 
     // Simulation
-    //return 'LOCAL';
+    return 'LOCAL';
 
     // Production
-    return 'AWS';
+    //return 'AWS';
 }
 
 module.exports = Object.freeze(env);

@@ -7,6 +7,9 @@ const tz = require('moment-timezone');
 const AWS = require('aws-sdk');
 const multer = require('multer');
 const logger = require('../controllers/logRecorder');
+const { v4: uuidv4 } = require('uuid');
+const eth = require('./ethereumScripts');
+
 
 const env = require('../Environment');
 const Constants = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
@@ -81,11 +84,11 @@ const getOrderItemPharmacy = async (req, res) => {
 // Get item photo from S3
 const getOrderLinePhoto = async (req, res) => {
 
-    const {photo} = req.query;
+    const { photo } = req.query;
     logExtra = `photo: ${photo}`;
 
     const getParams = {
-        Bucket: bucket, 
+        Bucket: bucket,
         Key: `orders/photos/${photo}`
     };
 
@@ -104,31 +107,22 @@ const getOrderLinePhoto = async (req, res) => {
 // Table is denormalized to enhance performance when inserting/selecting (1 unique table)
 const addOrder = async (req, res) => {
     try {
-        const seq = await query(`SELECT NEXTVAL('order_order_id_seq');`, 'select', []);
-        
-        // Begin COMPATIBILITY to DoctorMax v2.4
-        // in v2.4, parameters sent are { order, pharmacy, user_id }
-        // in v2.5, parameters sent are { order, user, user_id }
-        let { order, user, pharmacy, user_id } = req.body;
-        if (pharmacy) user=pharmacy[0];
-        // To be removed when no Users are in v2.4, and replace by:
-        // const { order, user, user_id } = req.body;
-        // End COMPATIBILITY to BoactorMax v2.4
-
+        const { order, user, user_id } = req.body;
         logExtra = `user: ${user_id} `;
 
         // Save items with photo in an array, to be sent back to the front-end, from where axios call
         // will be performed at multer routes to save photos in server and send them to S3.
         const result = [];
 
-        if (order && user && seq) {
+        if (order && user) {
 
+            const order_id = uuidv4();      // RFC-compliant UUID
+            const status = 1;               // Status: 1 'Pending'
             const pharmacy_id = user.favPharmacyID;
             const address_id = user_id;
-            const status = 1;       // Status: 1 'Pending'
             const creation_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
             const update_date = creation_date;
-            const order_id = parseInt(seq[0].nextval, 10);
+
             logExtra += `order: ${order_id} pharmacy: ${pharmacy_id}`;
 
             for (let i = 0; i < order.length; i++) {
@@ -137,41 +131,52 @@ const addOrder = async (req, res) => {
                 const item_desc = order[i].item_description;
                 const photo_url = order[i].itemPhoto;
                 const photo_url_db = (photo_url) ? `${order_id}_${order_item}.jpg` : '';
-                //const photo_data = order[i].photo_data;
-
-                const args = [order_id,
+                const args = [
+                    order_id,
                     order_item,
                     pharmacy_id,
                     user_id,
                     address_id,
                     status,
                     item_desc,
-                    photo_url_db, //photo_url,
+                    photo_url_db,
                     creation_date,
-                    update_date];
+                    update_date
+                ];
 
                 // Save Order item into PostgreSQL
                 const q = fs.readFileSync(path.join(__dirname, `/../queries/insert/insert_order.sql`), 'utf8');
                 await query(q, 'insert', args);
 
-                // Save Order photo into AWS S3 section
-
-                // Send back Order ID with all Order Items & Photo URLs
+                // Send back Order ID with all Order Items & Photo URLs (a second call from the front-end will be done to AWS S3 to save the photos)
                 result.push({
                     order_id: order_id,
                     order_item: order_item,
                     photo_url: photo_url
                 })
 
-                //TODO IMPROVEMENT: We should call the S3 upload directly from here, but FormData is not accepted by S3,
-                // so we save the Order into Postgress, send back Order ID and Order items to front-end, and from there, 
-                // there is call through axios for each picture, which is stored in the server. Finally, the server reads 
-                // the pictures and sends to S3.
+                const params = {
+                    order_id: order_id,
+                    order_item: order_item,
+                    pharmacy_id: pharmacy_id,
+                    user_id: user_id,
+                    product_id: 0,
+                    user_ip: '0.0.0.0',
+                    creation_date: creation_date,
+                }
 
-                //savePhotoIntoS3(photo_data, photo_id);
+                // Add order item into log table
+                //const res = await eth.saveLogDB(params);
+                await eth.saveLog(params);
 
+
+                //const params = '0x35c818e9a9b6d1a4b62c6ea4bc5ca04b21b4a2c2ee901cfadcf6779d2cccb5c2';
+                //const params = '0x992d47fefdc17b1946ac68480575aa2758c2b802c2482c1c8124713f0631c398';
+                //const res = await eth.getLogEth(params);
+                //await eth.saveLogEth(params);
+                //const res = await eth.getLogEth('0x992d47fefdc17b1946ac68480575aa2758c2b802c2482c1c8124713f0631c398');
             }
-            //res.status(201).send(`Order added successfully`);
+
             res.status(201).send(result);
         } else {
             logger.save('ERR', 'BACK-END', `queries.js -> addOrder(): Missing fields to complete Order`, '');
@@ -184,6 +189,7 @@ const addOrder = async (req, res) => {
         console.log('Error at queries.js -> addOrder(): ', err);
     }
 };
+
 
 const movePhotosToS3 = async (req, res) => {
     try {
@@ -198,7 +204,7 @@ const movePhotosToS3 = async (req, res) => {
             fs.readFile(`uploads/${fileName}`, (err, data) => {
                 const params2 = {
                     Bucket: bucket,
-                    Key: `orders/photos/${fileName}`, 
+                    Key: `orders/photos/${fileName}`,
                     Body: data,
                 };
                 s3.upload(params2, (err, data) => {
@@ -210,12 +216,12 @@ const movePhotosToS3 = async (req, res) => {
                     }
                     // Delete file (either with error or not)
                     fs.unlink(`uploads/${fileName}`, err => {
-                        if (err) { 
+                        if (err) {
                             console.log('Error on queries.js -> movePhotosToS3() -> fs.unlink(): ', err);
                             logger.save('ERR', 'BACK-END', `queries.js -> movePhotosToS3() -> s3.unlink(): ${err}`, logExtra);
                         } else {
                             console.log(`${fileName} deleted`);
-                        } 
+                        }
                     });
                 });
             });
@@ -292,21 +298,21 @@ const getUserProfile = async (req, res) => {
     }
 }
 
- // Save User's data from Profile screen
- const setUserProfile = async (req, res) => {
+// Save User's data from Profile screen
+const setUserProfile = async (req, res) => {
     try {
         const { user } = req.body;
         logExtra = `user: ${user.id}`;
         const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
         const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_user_profile.sql`), 'utf8');
-        const results = await query(q, 'update', 
-            [user.id, 
-            user.name, 
+        const results = await query(q, 'update',
+            [user.id,
+            user.name,
             user.gender,
             user.email,
             user.birthday,
             user.phone,
-            update_date]);
+                update_date]);
         if (results === 400) {
             res.status(202).send(`User ${user.id} NOT updated`);
         } else {
@@ -316,9 +322,9 @@ const getUserProfile = async (req, res) => {
         console.log('Error at queries.js -> setUserPharmacy() :', err);
         logger.save('ERR', 'BACK-END', `queries.js -> setUserPharmacy(): ${err}`, logExtra);
     }
- }
+}
 
- const getPharmacyProfile = async (req, res) => {
+const getPharmacyProfile = async (req, res) => {
     try {
         const args = req.query;
         console.log('++ :', args.pharmacy_id)
@@ -332,16 +338,16 @@ const getUserProfile = async (req, res) => {
     }
 }
 
- // Save User's data from Profile screen
- const setPharmacyProfile = async (req, res) => {
+// Save User's data from Profile screen
+const setPharmacyProfile = async (req, res) => {
     try {
         const { pharmacy } = req.body;
         logExtra = `pharmacy: ${pharmacy.id}`;
         const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
         const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_pharmacy_profile.sql`), 'utf8');
         const results = await query(q, 'update', [
-            pharmacy.pharmacy_id, 
-            pharmacy.name, 
+            pharmacy.pharmacy_id,
+            pharmacy.name,
             pharmacy.phone,
             pharmacy.email,
             update_date]);
@@ -354,7 +360,7 @@ const getUserProfile = async (req, res) => {
         console.log('Error at queries.js -> setPharmacyProfile() :', err);
         logger.save('ERR', 'BACK-END', `queries.js -> setPharmacyProfile(): ${err}`, logExtra);
     }
- }
+}
 
 // Get User's address, where address_id is equivalent to user_id
 const getUserAddress = async (req, res) => {
@@ -368,10 +374,10 @@ const getUserAddress = async (req, res) => {
         console.log('Error at queries.js -> getUserAddress() :', err);
         logger.save('ERR', 'BACK-END', `queries.js -> getUserAddress(): ${err}`, logExtra);
     }
- }
+}
 
- // Save User's address from Profile screen
- const setUserAddress = async (req, res) => {
+// Save User's address from Profile screen
+const setUserAddress = async (req, res) => {
     try {
 
         // Get params
@@ -386,11 +392,11 @@ const getUserAddress = async (req, res) => {
 
         // Do insert or update depending whether the address exists or not
         if (count.length > 0) {
-             // User address exists -> update
+            // User address exists -> update
             const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_user_address.sql`), 'utf8');
             results = await query(q, 'update', [
-                address.id, 
-                address.street, 
+                address.id,
+                address.street,
                 address.locality,
                 address.zipcode,
                 address.country,
@@ -399,8 +405,8 @@ const getUserAddress = async (req, res) => {
             // User address does not exist -> insert
             const q = fs.readFileSync(path.join(__dirname, `/../queries/insert/insert_user_address.sql`), 'utf8');
             results = await query(q, 'insert', [
-                address.id, 
-                address.street, 
+                address.id,
+                address.street,
                 address.locality,
                 address.zipcode,
                 address.country,
@@ -417,9 +423,9 @@ const getUserAddress = async (req, res) => {
         console.log('Error at queries.js -> setUserAddress() :', err);
         logger.save('ERR', 'BACK-END', `queries.js -> setUserAddress(): ${err}`, logExtra);
     }
- }
+}
 
- const checkUserEmail = async (req, res) => {
+const checkUserEmail = async (req, res) => {
     try {
         const args = req.query;
         logExtra = `user_id: ${args.user_id} email: ${args.email}`;
@@ -430,9 +436,9 @@ const getUserAddress = async (req, res) => {
         console.log('Error at queries.js -> checkUserEmail() :', err);
         logger.save('ERR', 'BACK-END', `queries.js -> checkUserEmail(): ${err}`, logExtra);
     }
- }
+}
 
- const checkPharmacyEmail = async (req, res) => {
+const checkPharmacyEmail = async (req, res) => {
     try {
         const args = req.query;
         logExtra = `pharmacy_id: ${args.pharmacy_id} email: ${args.email}`;
@@ -443,9 +449,9 @@ const getUserAddress = async (req, res) => {
         console.log('Error at queries.js -> checkPharmacyEmail() :', err);
         logger.save('ERR', 'BACK-END', `queries.js -> checkPharmacyEmail(): ${err}`, logExtra);
     }
- }
+}
 
- // Get Pharmacy's count on unseen & total chats
+// Get Pharmacy's count on unseen & total chats
 const getPharmacyChats = async (req, res) => {
     try {
         const args = req.query;
@@ -457,9 +463,9 @@ const getPharmacyChats = async (req, res) => {
         console.log('Error at queries.js -> getPharmacyChats() :', err);
         logger.save('ERR', 'BACK-END', `queries.js -> getPharmacyChats(): ${err}`, logExtra);
     }
- }
+}
 
-  // Get Pharmacy's count on unseen & total chats
+// Get Pharmacy's count on unseen & total chats
 const getPharmacyOrders = async (req, res) => {
     try {
         const args = req.query;
@@ -471,7 +477,7 @@ const getPharmacyOrders = async (req, res) => {
         console.log('Error at queries.js -> getPharmacyOrders() :', err);
         logger.save('ERR', 'BACK-END', `queries.js -> getPharmacyOrders(): ${err}`, logExtra);
     }
- }
+}
 
 // Use of 'pool.connect' to be able to rollback same pool of transactions in case of failure
 const query = async (q, op, args) => {
@@ -518,6 +524,6 @@ module.exports = {
     getPharmacyChats,
     getPharmacyOrders,
     movePhotosToS3,
-    query
+    query,
 };
 

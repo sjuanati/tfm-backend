@@ -3,6 +3,7 @@ let express = require('express');
 let path = require('path');
 let cookieParser = require('cookie-parser');
 let logger = require('morgan');
+let os = require('os');
 
 let usersRouter = require('./routes/users');
 let pharmacyRouter = require('./routes/pharmacy');
@@ -205,6 +206,31 @@ switch (env()) {
         console.log('No environment to run the back-end');
         break;
 }
+
+
+// Show IP address
+let ifaces = os.networkInterfaces();
+let IPs = [];
+Object.keys(ifaces).forEach(function (ifname) {
+    var alias = 0;
+
+    ifaces[ifname].forEach(function (iface) {
+        if ('IPv4' !== iface.family || iface.internal !== false) {
+            // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
+            return;
+        }
+        if (alias >= 1) {
+            // this single interface has multiple ipv4 addresses
+            console.log(ifname + ':' + alias, iface.address);
+            IPs.push(`${ifname} : ${alias}, ${iface.address}`);
+        } else {
+            // this interface has only one ipv4 adress
+            console.log(ifname, iface.address);
+            IPs.push(`${ifname}, ${iface.address}`);
+        }
+        ++alias;
+    });
+});
 
 module.exports = app;
 

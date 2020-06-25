@@ -3,6 +3,7 @@ const Sequelize = require('sequelize');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 let jwt = require('./jwt');
+const logger = require('../controllers/logRecorder');
 
 exports.register = async (req, res) => {
   let { name, email, password, phone } = req.body;
@@ -28,33 +29,62 @@ exports.register = async (req, res) => {
         res.status(400).json(e);
       }
 
-    }).catch(error => res.status(400).json(error));
+    }).catch(err => {
+        res.status(400).json(err)
+        logger.save('ERR', 'BACK-END', `userScript.js -> register(): ${err}`, `user: ${userFound}`);
+    });
 
   } else {
     res.status(404).send({message: 'Email is in use'});
   }
 };
 
+// BACKUP
+// exports.login = async (req, res) => {
+//   let user = req.body;
+//   let email = user.email;
+
+//   let userFound = await User.findOne({where: {email: email.toLowerCase()}});
+
+//   if(!userFound) {
+//     res.status(404).send({message: 'User not found'});
+//   } else {
+//     bcrypt.compare(user.password, userFound.password).then(async (check) => {
+//       if (check) {
+//         userFound.token = jwt.createToken(userFound, 'user');
+//         console.log('User found:', userFound.toJSON());
+//         res.status(200).json(userFound);
+//       } else {
+//         res.status(401).send({message: 'Incorrect credentials'});
+//       }
+//     });
+//   }
+// };
+
 exports.login = async (req, res) => {
-  let user = req.body;
-  let email = user.email;
+    let user = req.body;
+    let email = user.email;
+  
+    let userFound = await User.findOne({where: {email: email.toLowerCase()}});
 
-  let userFound = await User.findOne({where: {email: email.toLowerCase()}});
-
-  if(!userFound) {
-    res.status(404).send({message: 'User not found'});
-  } else {
-    bcrypt.compare(user.password, userFound.password).then(async (check) => {
-      if (check) {
-        userFound.token = jwt.createToken(userFound, 'user');
-        console.log(userFound.toJSON());
-        res.status(200).json(userFound);
-      } else {
-        res.status(401).send({message: 'Incorrect credentials'});
-      }
-    });
-  }
-};
+    if(!userFound) {
+      res.status(404).send({message: 'User not found'});
+    } else {
+      bcrypt.compare(user.password, userFound.password)
+      .then(async (check) => {
+        if (check) {
+          userFound.token = jwt.createToken(userFound, 'user');
+          console.log('User found:', userFound.toJSON());
+          res.status(200).json(userFound);
+        } else {
+          res.status(401).send({message: 'Incorrect credentials'});
+      }})
+      .catch(err => {
+            res.status(400).json(err)
+            logger.save('ERR', 'BACK-END', `userScript.js -> login(): ${err}`, `user: ${userFound}`);
+      });
+    }
+  };
 
 exports.findAll = async (req, res) => {
   let users = await User.findAll({
