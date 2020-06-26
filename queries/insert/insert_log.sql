@@ -3,11 +3,11 @@ INSERT INTO
 	"log_id",
 	"order_id",
 	"order_item",
+    "order_status",
+    "order_date",
 	"pharmacy_id",
 	"user_id",
 	"product_id",
-    "user_ip",
-    "creation_date",
     "hash"
     )
 VALUES (

@@ -116,17 +116,19 @@ const addOrder = async (req, res) => {
 
         if (order && user) {
 
-            const order_id = uuidv4();      // RFC-compliant UUID
-            const status = 1;               // Status: 1 'Pending'
+            const order_id = uuidv4();              // RFC-compliant UUID
+            const order_status = 1;                 // Status: 1 'Pending'
             const pharmacy_id = user.favPharmacyID;
             const address_id = user_id;
             const creation_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
             const update_date = creation_date;
+            const order_date = moment(creation_date, 'YYYY-MM-DD H:mm:ss').unix();
 
             logExtra += `order: ${order_id} pharmacy: ${pharmacy_id}`;
 
             for (let i = 0; i < order.length; i++) {
 
+                // Set parameters to be saved at Order item level
                 const order_item = i + 1;
                 const item_desc = order[i].item_description;
                 const photo_url = order[i].itemPhoto;
@@ -137,7 +139,7 @@ const addOrder = async (req, res) => {
                     pharmacy_id,
                     user_id,
                     address_id,
-                    status,
+                    order_status,
                     item_desc,
                     photo_url_db,
                     creation_date,
@@ -153,31 +155,13 @@ const addOrder = async (req, res) => {
                     order_id: order_id,
                     order_item: order_item,
                     photo_url: photo_url
-                })
-
-                const params = {
-                    order_id: order_id,
-                    order_item: order_item,
-                    pharmacy_id: pharmacy_id,
-                    user_id: user_id,
-                    product_id: 0,
-                    user_ip: '0.0.0.0',
-                    creation_date: creation_date,
-                }
-
-                // Add order item into log table
-                //const res = await eth.saveLogDB(params);
-                await eth.saveLog(params);
-
-
-                //const params = '0x35c818e9a9b6d1a4b62c6ea4bc5ca04b21b4a2c2ee901cfadcf6779d2cccb5c2';
-                //const params = '0x992d47fefdc17b1946ac68480575aa2758c2b802c2482c1c8124713f0631c398';
-                //const res = await eth.getLogEth(params);
-                //await eth.saveLogEth(params);
-                //const res = await eth.getLogEth('0x992d47fefdc17b1946ac68480575aa2758c2b802c2482c1c8124713f0631c398');
+                })                
             }
-
-            res.status(201).send(result);
+            
+            // Add Order data into Log table and Order hash into Blockchain
+            if (await eth.saveLog(order_id)) res.status(201).send(result);
+            else res.status(400).send(`Error al confirmar el pedido`);
+            
         } else {
             logger.save('ERR', 'BACK-END', `queries.js -> addOrder(): Missing fields to complete Order`, '');
             console.log('Warning on queries.js -> addOrder(): Missing fields to complete Order');

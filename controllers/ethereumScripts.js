@@ -24,12 +24,39 @@ HashContract.options.address = contractAddress;
 let log_id = '';
 let hash = '';
 
-const saveLog = async (params) => {
+const saveLog = async (order_id) => {
 
-    if (await saveLogDB(params)) saveLogEth(hash);
+    // Get Order from DB
+    const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order.sql`), 'utf8');
+    const res = await query(q, 'select', [order_id]);
+
+    // If Order is found in DB
+    if (res && res !== 400) {
+
+        // Save each Order item into the Log table
+        for (let i = 0; i < res.length; i++) {
+
+            // Set parameters to be sent to saveLog function
+            const params = {
+                order_id: res[0].order_id,
+                order_item: res[0].order_item,
+                order_status: res[0].status,
+                order_date: moment(res[0].update_date, 'YYYY-MM-DD H:mm:ss').unix(),
+                //order_date: res[0].update_date,
+                pharmacy_id: res[0].pharmacy_id,
+                user_id: res[0].user_id,
+                product_id: res[0].pack_id,
+            }
+
+            // Add Order item into Log table (DB) and save hash into Contract (Blockchain)
+            if (!(await saveLogDB(params)) || !(await saveLogEth(hash))) return false;
+        }
+    } else return false;
+
+    return true;
 }
 
-// Save log record into DB
+// Save Order data into Log table (DB)
 const saveLogDB = (params) => {
     return new Promise(async (resolve, reject) => {
 
@@ -44,29 +71,32 @@ const saveLogDB = (params) => {
                     log_id ||
                     params.order_id ||
                     params.order_item ||
+                    params.order_status ||
+                    params.order_date ||
                     params.pharmacy_id ||
                     params.user_id ||
-                    params.product_id ||
-                    params.user_ip ||
-                    params.creation_date)
+                    params.product_id)
                 .digest('hex');
 
             // Save Order data into DB including its hash
             const q = fs.readFileSync(path.join(__dirname, `/../queries/insert/insert_log.sql`), 'utf8');
-            await query(q, 'insert', [
+            const res = await query(q, 'insert', [
                 log_id,
                 params.order_id,
                 params.order_item,
+                params.order_status,
+                params.order_date,
                 params.pharmacy_id,
                 params.user_id,
                 params.product_id,
-                params.user_ip,
-                params.creation_date,
-                hash
+                hash,
             ]);
 
-            // Return hash to be stored in the Blockchain
-            resolve(true);
+            console.log('res:', res);
+
+            // If insert into DB successful, return 'true' to go ahead
+            if (res !== 400) resolve(true);
+            else reject(false);
 
         } catch (err) {
             console.log('Error on ethereumScript.js: ', err);
@@ -75,25 +105,32 @@ const saveLogDB = (params) => {
     })
 }
 
-// Save hash record into Ethereum and tx Hash into the DB
+// Save Order hash into Ethereum and returned Tx hash into the DB
 const saveLogEth = (hash) => {
+    return new Promise(async (resolve, reject) => {
 
-    // Call method 'saveHash' from 'Hash' contract to save the order hash
-    HashContract.methods.saveHash('0x' || hash).send({ from: address1 })
-        .then(async res => {
-            console.log('Result: ', res);
-            // Save transaction hash into DB
-            const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_log_txhash.sql`), 'utf8');
-            const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
-            const txhash = res.transactionHash;
-            await query(q, 'update', [
-                log_id,
-                txhash,
-                update_date,
-            ]);
+        // Save Order hash into Ethereum within the Hash Contract
+        HashContract.methods.saveHash('0x' || hash).send({ from: address1 })
+            .then(async res => {
 
-        })
-        .catch(err => console.log('Errorinin: ', err));
+                // Save transaction hash into DB
+                const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_log_txhash.sql`), 'utf8');
+                const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
+                const txhash = res.transactionHash;
+                const resDB = await query(q, 'update', [
+                    log_id,
+                    txhash,
+                    update_date,
+                ]);
+                console.log('Result: ', res);
+                if (resDB !== 400) resolve(true);
+                else reject(false);
+            })
+            .catch(err => {
+                console.log('Errorinin: ', err);
+                reject(false);
+            });
+    })
 }
 
 // Retrieve hash record from Ethereum
