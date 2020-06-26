@@ -1,6 +1,8 @@
-
+// Libraries
 const fs = require('fs');
 const path = require('path');
+const moment = require('moment');
+const tz = require('moment-timezone');
 const Web3 = require('web3');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
@@ -18,12 +20,13 @@ const ABI_DATA = fs.readFileSync(path.join(__dirname, `/../contracts/Hash.abi`),
 const HashContract = new web3.eth.Contract(JSON.parse(ABI_DATA));
 HashContract.options.address = contractAddress;
 
+// Global variables
+let log_id = '';
+let hash = '';
 
 const saveLog = async (params) => {
 
-    const hash = await saveLogDB(params);
-    console.log('hash: ', hash);
-    if (hash) saveLogEth(hash);
+    if (await saveLogDB(params)) saveLogEth(hash);
 }
 
 // Save log record into DB
@@ -31,11 +34,11 @@ const saveLogDB = (params) => {
     return new Promise(async (resolve, reject) => {
 
         try {
-            // GUID for log record
-            const log_id = uuidv4();
+            // Generate GUID for log record
+            log_id = uuidv4();
 
             // Create hash on log record
-            const hash = crypto
+            hash = crypto
                 .createHash('sha256')
                 .update(
                     log_id ||
@@ -48,7 +51,7 @@ const saveLogDB = (params) => {
                     params.creation_date)
                 .digest('hex');
 
-            // Save Order item into DB
+            // Save Order data into DB including its hash
             const q = fs.readFileSync(path.join(__dirname, `/../queries/insert/insert_log.sql`), 'utf8');
             await query(q, 'insert', [
                 log_id,
@@ -62,22 +65,33 @@ const saveLogDB = (params) => {
                 hash
             ]);
 
-            resolve(hash);
+            // Return hash to be stored in the Blockchain
+            resolve(true);
 
         } catch (err) {
             console.log('Error on ethereumScript.js: ', err);
-            reject();
+            reject(false);
         }
     })
 }
 
-// Save hash record into Ethereum
+// Save hash record into Ethereum and tx Hash into the DB
 const saveLogEth = (hash) => {
 
-    HashContract.methods.saveHash('0x' || hash).send({from: address1})
-        .then(res => {
-            console.log('Hash saved');
-            console.log('Result: ', res)
+    // Call method 'saveHash' from 'Hash' contract to save the order hash
+    HashContract.methods.saveHash('0x' || hash).send({ from: address1 })
+        .then(async res => {
+            console.log('Result: ', res);
+            // Save transaction hash into DB
+            const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_log_txhash.sql`), 'utf8');
+            const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
+            const txhash = res.transactionHash;
+            await query(q, 'update', [
+                log_id,
+                txhash,
+                update_date,
+            ]);
+
         })
         .catch(err => console.log('Errorinin: ', err));
 }
@@ -87,7 +101,7 @@ const getLogEth = (hash) => {
 
     HashContract.methods.getHash(hash).call()
         .then(res => {
-            if (res && (res[0] === NULL_ADDRESS || res[1] === NULL_DATE) ) {
+            if (res && (res[0] === NULL_ADDRESS || res[1] === NULL_DATE)) {
                 console.log('No hash found');
             } else {
                 console.log('Hash found');
