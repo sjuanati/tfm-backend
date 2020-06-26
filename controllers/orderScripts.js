@@ -4,6 +4,7 @@ const Order = require('../models/order');
 const Chat = require('../models/chat');
 const Message = require('../models/message');
 const {query} = require('./queries');
+const eth = require('./ethereumScripts');
 
 const pg = require('pg');
 const fs = require('fs');
@@ -163,7 +164,11 @@ exports.cancelOrder = async (req, res) => {
       }
     });
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
-    res.status(200).send({order: orderItems});
+
+    // Add Order data into Log table and Order hash into Blockchain
+    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    else res.status(400).send(`Error al cancelar el pedido`);
+
   } catch (e) {
     console.log(e);
     res.status(400).json({error: 'Error canceling order'});
@@ -183,7 +188,11 @@ exports.cancelOrderUser = async (req, res) => {
       }
     });
     let orderItems = await getItemOrdersUser(body.user_id, body.order_id);
-    res.status(200).send({order: orderItems});
+
+    // Add Order data into Log table and Order hash into Blockchain
+    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    else res.status(400).send(`Error al cancelar el pedido`);
+
   } catch (e) {
     console.log(e);
     res.status(400).json({error: 'Error canceling order'});
@@ -203,7 +212,11 @@ exports.deliverOrder = async (req, res) => {
       }
     });
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
-    res.status(200).send({order: orderItems});
+    
+    // Add Order data into Log table and Order hash into Blockchain
+    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    else res.status(400).send(`Error al entregar el pedido`);
+
   } catch (e) {
     console.log(e);
     res.status(400).json({error: 'Error delivering order'});
@@ -213,7 +226,6 @@ exports.deliverOrder = async (req, res) => {
 exports.informPriceOrder = async (req, res) => {
   let body = req.body;
 
-  console.log(body);
   try {
     await Order.update({
       status: 2,
@@ -225,8 +237,11 @@ exports.informPriceOrder = async (req, res) => {
       }
     });
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
-    console.log(orderItems[0]);
-    res.status(200).send({order: orderItems});
+
+    // Add Order data into Log table and Order hash into Blockchain
+    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    else res.status(400).send(`Error al informar precio en el pedido`);
+
   } catch (e) {
     console.log(e);
     res.status(400).json({error: 'Error delivering order'});
@@ -235,7 +250,7 @@ exports.informPriceOrder = async (req, res) => {
 
 exports.acceptPriceOrder = async (req, res) => {
   let body = req.body;
-
+  
   try {
     await Order.update({
       status: 3
@@ -246,7 +261,11 @@ exports.acceptPriceOrder = async (req, res) => {
       }
     });
     let orderItems = await getItemOrdersUser(body.user_id, body.order_id);
-    res.status(200).send({order: orderItems});
+
+    // Add Order data into Log table and Order hash into Blockchain
+    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    else res.status(400).send(`Error al acceptar precio en el pedido`);
+
   } catch (e) {
     console.log(e);
     res.status(400).json({error: 'Error delivering order'});
@@ -266,7 +285,11 @@ exports.onTheWayOrder = async (req, res) => {
       }
     });
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
-    res.status(200).send({order: orderItems});
+
+    // Add Order data into Log table and Order hash into Blockchain
+    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    else res.status(400).send(`Error al enviar el pedido`);
+
   } catch (e) {
     console.log(e);
     res.status(400).json({error: 'Error putting on the way an order'});
@@ -287,7 +310,11 @@ exports.readyOrder = async (req, res) => {
       }
     });
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
-    res.status(200).send({order: orderItems});
+
+    // Add Order data into Log table and Order hash into Blockchain
+    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    else res.status(400).send(`Error al dejar el pedido listo`);
+
   } catch (e) {
     console.log(e);
     res.status(400).json({error: 'Error making ready order'});
