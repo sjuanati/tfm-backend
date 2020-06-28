@@ -3,13 +3,13 @@ INSERT INTO
 	"trace_id",
 	"order_id",
     "order_id_app",
+	"order_item",
     "order_status",
     "order_date",
 	"pharmacy_id",
 	"user_id",
-    "order_items",
-	"product_ids",
-    "db_hash",
+	"product_id",
+    "hash",
     "update_date"
     )
 VALUES (

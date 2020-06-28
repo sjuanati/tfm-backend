@@ -1,6 +1,6 @@
 SELECT
 	status,
-	count(1) as "total"
+	count(distinct(order_id)) as "total"
 FROM
 	public.order
 WHERE

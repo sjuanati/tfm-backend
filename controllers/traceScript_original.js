@@ -7,12 +7,12 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('../shared/query');
 const eth = require('../controllers/ethereumScript');
+
+// Global variables
+let trace_id = '';
 let hash = '';
 
 const saveOrderTrace = async (order_id) => {
-
-    let order_items = [];
-    let product_ids = [];
 
     // Get Order from DB
     const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order.sql`), 'utf8');
@@ -21,41 +21,33 @@ const saveOrderTrace = async (order_id) => {
     // If Order is found in DB
     if (res && res !== 400) {
 
-        // Get Order items
+        // Save each Order item into the Order Trace table
         for (let i = 0; i < res.length; i++) {
 
-            order_items.push(res[i].order_item);
-            product_ids.push(res[i].product_id || 0);
+            // Set parameters to be sent to saveOrderTrace function
+            const params = {
+                order_id: res[i].order_id,
+                order_id_app: res[i].order_id_app,
+                order_item: res[i].order_item,
+                order_status: res[i].status,
+                order_date: moment(res[i].update_date, 'YYYY-MM-DD H:mm:ss').unix(),
+                //order_date: res[i].update_date,
+                pharmacy_id: res[i].pharmacy_id,
+                user_id: res[i].user_id,
+                product_id: res[i].pack_id,
+                update_date: res[i].update_date,
+            }
+
+            // Add Order item into Order Trace table (DB) and save hash into Contract (Blockchain)
+            //if (!(await saveOrderTraceDB(params)) || !(await eth.saveOrderTraceEth(hash, trace_id))) return false;
+            if (await saveOrderTraceDB(params)) {
+                if (!await eth.saveOrderTraceEth(hash, trace_id)) return false
+            } else return false;
+
         }
-    }
+    } else return false;
 
-    // Build Order data structure to be saved into the Trace table
-    const params = {
-        trace_id: uuidv4(),
-        order_id: res[0].order_id,
-        order_id_app: res[0].order_id_app,
-        order_status: res[0].status,
-        order_date: moment(res[0].update_date, 'YYYY-MM-DD H:mm:ss').unix(),
-        pharmacy_id: res[0].pharmacy_id,
-        user_id: res[0].user_id,
-        order_items: order_items,
-        product_ids: product_ids,
-        update_date: res[0].update_date,
-    }
-
-    console.log('Input: ', params);
-
-    //return (await saveOrderTraceDB(params)) ? true : false;
-
-    return (await saveOrderTraceDB(params) && await eth.saveOrderTraceEth(hash, params.trace_id)) ? true : false;
-
-
-
-    // Add Order item into Order Trace table (DB) and save hash into Contract (Blockchain)
-    // if (await saveOrderTraceDB(params)) {
-    //     if (!await eth.saveOrderTraceEth(hash, trace_id)) return false
-    // } else return false;
-    //return false;
+    return true;
 }
 
 // Save Order data into trace table (DB)
@@ -63,34 +55,35 @@ const saveOrderTraceDB = (params) => {
     return new Promise(async (resolve, reject) => {
 
         try {
+            // Generate GUID for log record
+            trace_id = uuidv4();
 
             // Create hash on log record
             hash = crypto
                 .createHash('sha256')
                 .update(
-                    params.trace_id +
-                    params.order_id +
-                    params.order_id_app +
-                    params.order_status +
-                    params.order_date +
-                    params.pharmacy_id +
-                    params.user_id +
-                    params.order_items.join('') +
-                    params.product_ids.join(''))
+                    trace_id ||
+                    params.order_id ||
+                    params.order_item ||
+                    params.order_status ||
+                    params.order_date ||
+                    params.pharmacy_id ||
+                    params.user_id ||
+                    params.product_id)
                 .digest('hex');
 
             // Save Order data into DB including its hash
             const q = fs.readFileSync(path.join(__dirname, `/../queries/insert/insert_order_trace.sql`), 'utf8');
             const res = await query(q, 'insert', [
-                params.trace_id,
+                trace_id,
                 params.order_id,
                 params.order_id_app,
+                params.order_item,
                 params.order_status,
                 params.order_date,
                 params.pharmacy_id,
                 params.user_id,
-                params.order_items,
-                params.product_ids,
+                params.product_id,
                 hash,
                 params.update_date,
             ]);
@@ -102,7 +95,7 @@ const saveOrderTraceDB = (params) => {
             else reject(false);
 
         } catch (err) {
-            console.log('Error in traceScript.js -> saveOrderTraceDB(): ', err);
+            console.log('Error on ethereumScript.js: ', err);
             reject(false);
         }
     })
@@ -113,7 +106,7 @@ const getOrderTraceDB = async (req, res) => {
         const args = req.query;
 
         // Get Order Trace from DB
-        const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_trace.sql`), 'utf8');
+        const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_txhash.sql`), 'utf8');
         const resDB = await query(q, 'select', [args.order_id]);
         console.log('Resssss: ', resDB);
         res.status(200).json(resDB);

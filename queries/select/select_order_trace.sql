@@ -5,5 +5,4 @@ FROM
 WHERE
 	"order_id" = $1
 ORDER BY
-	order_status, 
-	order_item;
+	order_status;

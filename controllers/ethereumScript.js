@@ -21,7 +21,7 @@ const HashContract = new web3.eth.Contract(JSON.parse(ABI_DATA));
 HashContract.options.address = contractAddress;
 
 
-// Save Order hash into Ethereum and returned Tx hash into the DB
+// Save Order hash into Ethereum and save returned Tx hash into the DB
 const saveOrderTraceEth = (hash, log_id) => {
     return new Promise(async (resolve, reject) => {
 
@@ -30,7 +30,7 @@ const saveOrderTraceEth = (hash, log_id) => {
             .then(async res => {
 
                 // Save transaction hash into DB
-                const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_txhash.sql`), 'utf8');
+                const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_trace.sql`), 'utf8');
                 const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
                 const txhash = res.transactionHash;
                 const resDB = await query(q, 'update', [
@@ -43,7 +43,7 @@ const saveOrderTraceEth = (hash, log_id) => {
                 else reject(false);
             })
             .catch(err => {
-                console.log('Errorinin: ', err);
+                console.log('Error in ethereumScript.js -> saveOrderTraceEth(): ', err);
                 reject(false);
             });
     })
@@ -61,7 +61,7 @@ const getOrderTraceEth = (hash) => {
             }
             console.log(res);
         })
-        .catch(err => console.log('Errorinin: ', err));
+        .catch(err => console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err));
 }
 
 module.exports = {
