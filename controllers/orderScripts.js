@@ -4,7 +4,9 @@ const Order = require('../models/order');
 const Chat = require('../models/chat');
 const Message = require('../models/message');
 const {query} = require('./queries');
-const eth = require('./ethereumScripts');
+const trace = require('./traceScript');
+const moment = require('moment');
+const tz = require('moment-timezone');
 
 const pg = require('pg');
 const fs = require('fs');
@@ -156,7 +158,8 @@ exports.cancelOrder = async (req, res) => {
   try {
     await Order.update({
       status: 6,
-      comments: body.comments
+      comments: body.comments,
+      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
       where: {
         order_id: body.order_id,
@@ -166,7 +169,7 @@ exports.cancelOrder = async (req, res) => {
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
-    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
     else res.status(400).send(`Error al cancelar el pedido`);
 
   } catch (e) {
@@ -181,6 +184,7 @@ exports.cancelOrderUser = async (req, res) => {
   try {
     await Order.update({
       status: 6,
+      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
       where: {
         order_id: body.order_id,
@@ -190,7 +194,7 @@ exports.cancelOrderUser = async (req, res) => {
     let orderItems = await getItemOrdersUser(body.user_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
-    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
     else res.status(400).send(`Error al cancelar el pedido`);
 
   } catch (e) {
@@ -204,7 +208,8 @@ exports.deliverOrder = async (req, res) => {
 
   try {
     await Order.update({
-      status: 5
+      status: 5,
+      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
       where: {
         order_id: body.order_id,
@@ -214,7 +219,7 @@ exports.deliverOrder = async (req, res) => {
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
     
     // Add Order data into Log table and Order hash into Blockchain
-    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
     else res.status(400).send(`Error al entregar el pedido`);
 
   } catch (e) {
@@ -229,7 +234,8 @@ exports.informPriceOrder = async (req, res) => {
   try {
     await Order.update({
       status: 2,
-      total_price: body.totalPrice
+      total_price: body.totalPrice,
+      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
       where: {
         order_id: body.order_id,
@@ -239,7 +245,7 @@ exports.informPriceOrder = async (req, res) => {
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
-    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
     else res.status(400).send(`Error al informar precio en el pedido`);
 
   } catch (e) {
@@ -253,7 +259,8 @@ exports.acceptPriceOrder = async (req, res) => {
   
   try {
     await Order.update({
-      status: 3
+      status: 3,
+      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
       where: {
         order_id: body.order_id,
@@ -263,7 +270,7 @@ exports.acceptPriceOrder = async (req, res) => {
     let orderItems = await getItemOrdersUser(body.user_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
-    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
     else res.status(400).send(`Error al acceptar precio en el pedido`);
 
   } catch (e) {
@@ -277,7 +284,8 @@ exports.onTheWayOrder = async (req, res) => {
 
   try {
     let orderUpdated = await Order.update({
-      status: 3
+      status: 3,
+      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
       where: {
         order_id: body.order_id,
@@ -287,7 +295,7 @@ exports.onTheWayOrder = async (req, res) => {
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
-    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
     else res.status(400).send(`Error al enviar el pedido`);
 
   } catch (e) {
@@ -301,7 +309,8 @@ exports.readyOrder = async (req, res) => {
 
   try {
     let orderUpdated = await Order.update({
-      status: 4
+      status: 4,
+      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
       where: {
         status: 3,
@@ -312,7 +321,7 @@ exports.readyOrder = async (req, res) => {
     let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
-    if (await eth.saveLog(body.order_id)) res.status(200).send({order: orderItems});
+    if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
     else res.status(400).send(`Error al dejar el pedido listo`);
 
   } catch (e) {

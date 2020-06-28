@@ -20,93 +20,9 @@ const ABI_DATA = fs.readFileSync(path.join(__dirname, `/../contracts/Hash.abi`),
 const HashContract = new web3.eth.Contract(JSON.parse(ABI_DATA));
 HashContract.options.address = contractAddress;
 
-// Global variables
-let log_id = '';
-let hash = '';
-
-const saveLog = async (order_id) => {
-
-    // Get Order from DB
-    const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order.sql`), 'utf8');
-    const res = await query(q, 'select', [order_id]);
-
-    // If Order is found in DB
-    if (res && res !== 400) {
-
-        // Save each Order item into the Log table
-        for (let i = 0; i < res.length; i++) {
-
-            // Set parameters to be sent to saveLog function
-            const params = {
-                order_id: res[0].order_id,
-                order_item: res[0].order_item,
-                order_status: res[0].status,
-                order_date: moment(res[0].update_date, 'YYYY-MM-DD H:mm:ss').unix(),
-                //order_date: res[0].update_date,
-                pharmacy_id: res[0].pharmacy_id,
-                user_id: res[0].user_id,
-                product_id: res[0].pack_id,
-            }
-
-            // Add Order item into Log table (DB) and save hash into Contract (Blockchain)
-            if (!(await saveLogDB(params)) || !(await saveLogEth(hash))) return false;
-        }
-    } else return false;
-
-    return true;
-}
-
-// Save Order data into Log table (DB)
-const saveLogDB = (params) => {
-    return new Promise(async (resolve, reject) => {
-
-        try {
-            // Generate GUID for log record
-            log_id = uuidv4();
-
-            // Create hash on log record
-            hash = crypto
-                .createHash('sha256')
-                .update(
-                    log_id ||
-                    params.order_id ||
-                    params.order_item ||
-                    params.order_status ||
-                    params.order_date ||
-                    params.pharmacy_id ||
-                    params.user_id ||
-                    params.product_id)
-                .digest('hex');
-
-            // Save Order data into DB including its hash
-            const q = fs.readFileSync(path.join(__dirname, `/../queries/insert/insert_log.sql`), 'utf8');
-            const res = await query(q, 'insert', [
-                log_id,
-                params.order_id,
-                params.order_item,
-                params.order_status,
-                params.order_date,
-                params.pharmacy_id,
-                params.user_id,
-                params.product_id,
-                hash,
-            ]);
-
-            console.log('res:', res);
-
-            // If insert into DB successful, return 'true' to go ahead
-            if (res !== 400) resolve(true);
-            else reject(false);
-
-        } catch (err) {
-            console.log('Error on ethereumScript.js: ', err);
-            reject(false);
-        }
-    })
-}
 
 // Save Order hash into Ethereum and returned Tx hash into the DB
-const saveLogEth = (hash) => {
+const saveOrderTraceEth = (hash, log_id) => {
     return new Promise(async (resolve, reject) => {
 
         // Save Order hash into Ethereum within the Hash Contract
@@ -114,7 +30,7 @@ const saveLogEth = (hash) => {
             .then(async res => {
 
                 // Save transaction hash into DB
-                const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_log_txhash.sql`), 'utf8');
+                const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_txhash.sql`), 'utf8');
                 const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
                 const txhash = res.transactionHash;
                 const resDB = await query(q, 'update', [
@@ -134,7 +50,7 @@ const saveLogEth = (hash) => {
 }
 
 // Retrieve hash record from Ethereum
-const getLogEth = (hash) => {
+const getOrderTraceEth = (hash) => {
 
     HashContract.methods.getHash(hash).call()
         .then(res => {
@@ -149,10 +65,8 @@ const getLogEth = (hash) => {
 }
 
 module.exports = {
-    saveLog,
-    saveLogDB,
-    saveLogEth,
-    getLogEth,
+    saveOrderTraceEth,
+    getOrderTraceEth,
 }
 
 

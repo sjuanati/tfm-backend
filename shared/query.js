@@ -1,7 +1,7 @@
 const pg = require('pg');
 const fs = require('fs');
 const path = require('path');
-const logger = require('../controllers/logRecorder');
+const logger = require('../shared/logRecorder');
 const env = require('../Environment');
 const Constants = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
 

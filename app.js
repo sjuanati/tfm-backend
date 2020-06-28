@@ -12,6 +12,7 @@ let imageRouter = require('./routes/image');
 let audioRouter = require('./routes/audio');
 let orderRouter = require('./routes/order');
 const logRouter = require('./routes/log');
+const traceRouter = require('./routes/trace');
 const Chat = require('./models/chat');
 const Message = require('./models/message');
 
@@ -52,6 +53,7 @@ app.use('/pharmacy', pharmacyRouter);
 app.use('/chat', chatRouter);
 app.use('/order', orderRouter);
 app.use('/log', logRouter);
+app.use('/trace', traceRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

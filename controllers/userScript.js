@@ -3,7 +3,7 @@ const Sequelize = require('sequelize');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 let jwt = require('./jwt');
-const logger = require('../controllers/logRecorder');
+const logger = require('../shared/logRecorder');
 
 exports.register = async (req, res) => {
   let { name, email, password, phone } = req.body;

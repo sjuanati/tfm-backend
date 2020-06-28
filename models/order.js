@@ -14,6 +14,9 @@ const Order = db.define('Order', {
     type: Sequelize.INTEGER,
     primaryKey: true
   },
+  order_id_app: {
+    type: Sequelize.INTEGER,
+  },
   status: {
     type: Sequelize.SMALLINT
   },

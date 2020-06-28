@@ -1,6 +1,7 @@
 SELECT
 	o.order_id,
 	o.order_item,
+    o.order_id_app,
 	o.item_desc,
 	o.photo,
 	o.status,

@@ -6,9 +6,9 @@ const moment = require('moment');
 const tz = require('moment-timezone');
 const AWS = require('aws-sdk');
 const multer = require('multer');
-const logger = require('../controllers/logRecorder');
+const logger = require('../shared/logRecorder');
 const { v4: uuidv4 } = require('uuid');
-const eth = require('./ethereumScripts');
+const trace = require('./traceScript');
 
 
 const env = require('../Environment');
@@ -116,13 +116,14 @@ const addOrder = async (req, res) => {
 
         if (order && user) {
 
+            const seq = await query(`SELECT NEXTVAL('order_order_id_seq');`, 'select', []);
+            const order_id_app = parseInt(seq[0].nextval, 10);
             const order_id = uuidv4();              // RFC-compliant UUID
             const order_status = 1;                 // Status: 1 'Pending'
             const pharmacy_id = user.favPharmacyID;
             const address_id = user_id;
             const creation_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
             const update_date = creation_date;
-            const order_date = moment(creation_date, 'YYYY-MM-DD H:mm:ss').unix();
 
             logExtra += `order: ${order_id} pharmacy: ${pharmacy_id}`;
 
@@ -142,6 +143,7 @@ const addOrder = async (req, res) => {
                     order_status,
                     item_desc,
                     photo_url_db,
+                    order_id_app,
                     creation_date,
                     update_date
                 ];
@@ -159,7 +161,7 @@ const addOrder = async (req, res) => {
             }
             
             // Add Order data into Log table and Order hash into Blockchain
-            if (await eth.saveLog(order_id)) res.status(201).send(result);
+            if (await trace.saveOrderTrace(order_id)) res.status(201).send(result);
             else res.status(400).send(`Error al confirmar el pedido`);
             
         } else {

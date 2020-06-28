@@ -1,5 +1,6 @@
 SELECT DISTINCT
 	o.order_id,
+    --o.order_id_app,
 	o.status,
 	os.status_desc,
 	p.pharmacy_id,
