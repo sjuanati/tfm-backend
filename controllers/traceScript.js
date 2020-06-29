@@ -43,19 +43,8 @@ const saveOrderTrace = async (order_id) => {
         update_date: res[0].update_date,
     }
 
-    console.log('Input: ', params);
-
-    //return (await saveOrderTraceDB(params)) ? true : false;
-
+    // Save Order data into DB and save Order hash into Blockchain
     return (await saveOrderTraceDB(params) && await eth.saveOrderTraceEth(hash, params.trace_id)) ? true : false;
-
-
-
-    // Add Order item into Order Trace table (DB) and save hash into Contract (Blockchain)
-    // if (await saveOrderTraceDB(params)) {
-    //     if (!await eth.saveOrderTraceEth(hash, trace_id)) return false
-    // } else return false;
-    //return false;
 }
 
 // Save Order data into trace table (DB)
@@ -95,8 +84,6 @@ const saveOrderTraceDB = (params) => {
                 params.update_date,
             ]);
 
-            console.log('res:', res);
-
             // If insert into DB successful, return 'true' to go ahead
             if (res !== 400) resolve(true);
             else reject(false);
@@ -115,7 +102,21 @@ const getOrderTraceDB = async (req, res) => {
         // Get Order Trace from DB
         const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_trace.sql`), 'utf8');
         const resDB = await query(q, 'select', [args.order_id]);
-        console.log('Resssss: ', resDB);
+        
+        // Check DB Hash vs. Ethereum Hash for data integrity
+        if (resDB && resDB !== 400) {
+            for (let i=0; i<resDB.length; i++) {
+                console.log('item ',i,' -> ', resDB[i]);
+                if (await eth.getOrderTraceEth('0x' + resDB[i].db_hash)) {
+                    resDB[i].checksum = true;
+                    console.log('OK');
+                } else {
+                    resDB[i].checksum = false;
+                    console.log('NOK');
+                }
+            }
+        }
+console.log('Returned value: ', resDB);
         res.status(200).json(resDB);
     } catch (err) {
         console.log('Error at traceScript.js -> getOrderTraceDB() :', err);

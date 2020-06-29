@@ -26,7 +26,7 @@ const saveOrderTraceEth = (hash, log_id) => {
     return new Promise(async (resolve, reject) => {
 
         // Save Order hash into Ethereum within the Hash Contract
-        HashContract.methods.saveHash('0x' || hash).send({ from: address1 })
+        HashContract.methods.saveHash('0x' + hash).send({ from: address1 })
             .then(async res => {
 
                 // Save transaction hash into DB
@@ -49,19 +49,30 @@ const saveOrderTraceEth = (hash, log_id) => {
     })
 }
 
-// Retrieve hash record from Ethereum
+// Retrieve Order hash from Ethereum
 const getOrderTraceEth = (hash) => {
+    return new Promise(async (resolve) => {
+        try {
+            HashContract.methods.getHash(hash).call()
+                .then(res => {
+                    if (res && (res[0] === NULL_ADDRESS || res[1] === NULL_DATE)) {
+                        console.log('No hash found', res);
+                        resolve(false);
+                    } else {
+                        console.log('Hash found: ', res);
+                        resolve(true);
+                    }
+                })
+                .catch(err => {
+                    console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
+                    resolve(false);
+                });
+        } catch (err) { 
+            console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
+            resolve(false);
+        };
+    })
 
-    HashContract.methods.getHash(hash).call()
-        .then(res => {
-            if (res && (res[0] === NULL_ADDRESS || res[1] === NULL_DATE)) {
-                console.log('No hash found');
-            } else {
-                console.log('Hash found');
-            }
-            console.log(res);
-        })
-        .catch(err => console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err));
 }
 
 module.exports = {
