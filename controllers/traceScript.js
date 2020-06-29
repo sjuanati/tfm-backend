@@ -49,7 +49,7 @@ const saveOrderTrace = async (order_id) => {
 
 // Save Order data into trace table (DB)
 const saveOrderTraceDB = (params) => {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve) => {
 
         try {
 
@@ -80,19 +80,31 @@ const saveOrderTraceDB = (params) => {
                 params.user_id,
                 params.order_items,
                 params.product_ids,
-                hash,
+                '0x' + hash,
                 params.update_date,
             ]);
 
-            // If insert into DB successful, return 'true' to go ahead
-            if (res !== 400) resolve(true);
-            else reject(false);
+            // If insert into DB is successful, return 'true' to go ahead
+            (res !== 400) ? resolve(true) : resolve(false);
 
         } catch (err) {
             console.log('Error in traceScript.js -> saveOrderTraceDB(): ', err);
-            reject(false);
+            resolve(false);
         }
     })
+}
+
+const decodeError = (err) => {
+
+    // Parses error and returns a 'more human' error description
+    err = err.toLowerCase();
+    if (err.includes('invalid arrayify value')) 
+        return 'Invalid hash code';
+    else if (err.includes('invalid json rpc response')) 
+        return 'No connection to Blockchain';
+    else 
+        return 'Unrecognized error';
+
 }
 
 const getOrderTraceDB = async (req, res) => {
@@ -103,20 +115,16 @@ const getOrderTraceDB = async (req, res) => {
         const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_trace.sql`), 'utf8');
         const resDB = await query(q, 'select', [args.order_id]);
         
-        // Check DB Hash vs. Ethereum Hash for data integrity
+        // Check DB Hash vs. Ethereum Hash for Order data integrity (check every order status change)
         if (resDB && resDB !== 400) {
             for (let i=0; i<resDB.length; i++) {
                 console.log('item ',i,' -> ', resDB[i]);
-                if (await eth.getOrderTraceEth('0x' + resDB[i].db_hash)) {
-                    resDB[i].checksum = true;
-                    console.log('OK');
-                } else {
-                    resDB[i].checksum = false;
-                    console.log('NOK');
-                }
+                const {result, error} =  await eth.getOrderTraceEth(resDB[i].db_hash);
+                resDB[i].error = decodeError(String(error));
+                result ? resDB[i].checksum = true : resDB[i].checksum = false;
             }
         }
-console.log('Returned value: ', resDB);
+
         res.status(200).json(resDB);
     } catch (err) {
         console.log('Error at traceScript.js -> getOrderTraceDB() :', err);

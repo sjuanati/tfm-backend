@@ -57,19 +57,37 @@ const getOrderTraceEth = (hash) => {
                 .then(res => {
                     if (res && (res[0] === NULL_ADDRESS || res[1] === NULL_DATE)) {
                         console.log('No hash found', res);
-                        resolve(false);
+                        //resolve(false);
+                        resolve({
+                            result: false,
+                            error: 'Hash not found'
+                        });
                     } else {
                         console.log('Hash found: ', res);
-                        resolve(true);
+                        //resolve(true);
+                        resolve({
+                            result: true,
+                            error: null
+                        })
                     }
                 })
                 .catch(err => {
                     console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
-                    resolve(false);
+                    console.log('Error response: ', err.response);
+                    //resolve(false);
+                    resolve({
+                        result: false,
+                        error: err
+                    });
                 });
         } catch (err) { 
             console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
-            resolve(false);
+            console.log('Error response: ', err.response);
+            //resolve(false);
+            resolve({
+                result: false,
+                error: err
+            });
         };
     })
 
