@@ -18,12 +18,9 @@ const saveOrderTrace = async (order_id) => {
     const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order.sql`), 'utf8');
     const res = await query(q, 'select', [order_id]);
 
-    // If Order is found in DB
+    // If Order is found in DB, build two arrays (order items & product id's) to be added in the Order data structure
     if (res && res !== 400) {
-
-        // Get Order items
         for (let i = 0; i < res.length; i++) {
-
             order_items.push(res[i].order_item);
             product_ids.push(res[i].product_id || 0);
         }
@@ -99,9 +96,11 @@ const decodeError = (err) => {
     // Parses error and returns a 'more human' error description
     err = err.toLowerCase();
     if (err.includes('invalid arrayify value')) 
-        return 'Invalid hash code';
+        return 'Invalid hash';
     else if (err.includes('invalid json rpc response')) 
         return 'No connection to Blockchain';
+    else if (err.includes('hash not found'))
+        return 'Hash mismatch'
     else 
         return 'Unrecognized error';
 
@@ -114,6 +113,8 @@ const getOrderTraceDB = async (req, res) => {
         // Get Order Trace from DB
         const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_trace.sql`), 'utf8');
         const resDB = await query(q, 'select', [args.order_id]);
+
+        //TODO: Optionally re-build the hash through the order data stored in the DB, instead of getting the hash directly from the DB
         
         // Check DB Hash vs. Ethereum Hash for Order data integrity (check every order status change)
         if (resDB && resDB !== 400) {

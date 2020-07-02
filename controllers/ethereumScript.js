@@ -5,7 +5,7 @@ const moment = require('moment');
 const tz = require('moment-timezone');
 const Web3 = require('web3');
 const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
+//const { v4: uuidv4 } = require('uuid');
 const { query } = require('../shared/query');
 
 // Blockchain settings (Ganache)
@@ -57,14 +57,12 @@ const getOrderTraceEth = (hash) => {
                 .then(res => {
                     if (res && (res[0] === NULL_ADDRESS || res[1] === NULL_DATE)) {
                         console.log('No hash found', res);
-                        //resolve(false);
                         resolve({
                             result: false,
                             error: 'Hash not found'
                         });
                     } else {
                         console.log('Hash found: ', res);
-                        //resolve(true);
                         resolve({
                             result: true,
                             error: null
@@ -74,7 +72,6 @@ const getOrderTraceEth = (hash) => {
                 .catch(err => {
                     console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
                     console.log('Error response: ', err.response);
-                    //resolve(false);
                     resolve({
                         result: false,
                         error: err
@@ -83,7 +80,6 @@ const getOrderTraceEth = (hash) => {
         } catch (err) { 
             console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
             console.log('Error response: ', err.response);
-            //resolve(false);
             resolve({
                 result: false,
                 error: err

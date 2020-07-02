@@ -221,6 +221,18 @@ const movePhotosToS3 = async (req, res) => {
     }
 }
 
+const getPrescription = async (req, res) => {
+    try {
+        const args = req.query;
+        const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_prescription.sql`), 'utf8');
+        const results = await query(q, 'select', [args.ean13]);
+        res.status(200).json(results);
+    } catch (err) {
+        console.log('Error at queries.js -> getPrescription() :', err);
+        logger.save('ERR', 'BACK-END', `queries.js -> getPrescription(): ${err}`, logExtra);
+    }
+};
+
 const getPharmacy = async (req, res) => {
     try {
         const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_pharmacies.sql`), 'utf8');
@@ -495,6 +507,7 @@ module.exports = {
     getOrderItemPharmacy,
     getOrderLinePhoto,
     addOrder,
+    getPrescription,
     getPharmacy,
     getPharmacySchedule,
     getUserPharmacy,

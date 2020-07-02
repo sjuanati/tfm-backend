@@ -13,6 +13,7 @@ let audioRouter = require('./routes/audio');
 let orderRouter = require('./routes/order');
 const logRouter = require('./routes/log');
 const traceRouter = require('./routes/trace');
+const prescriptionRouter = require('./routes/prescription');
 const Chat = require('./models/chat');
 const Message = require('./models/message');
 
@@ -54,6 +55,7 @@ app.use('/chat', chatRouter);
 app.use('/order', orderRouter);
 app.use('/log', logRouter);
 app.use('/trace', traceRouter);
+app.use('/prescription', prescriptionRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
