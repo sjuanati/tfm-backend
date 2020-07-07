@@ -131,8 +131,11 @@ const addOrder = async (req, res) => {
 
                 // Set parameters to be saved at Order item level
                 const order_item = i + 1;
-                const item_desc = order[i].item_description;
+                const item_desc = order[i].item_desc;
+                const product_id = order[i].product_id;
+                const product_desc = order[i].product_desc;
                 const photo_url = order[i].itemPhoto;
+                const price = order[i].price;
                 const photo_url_db = (photo_url) ? `${order_id}_${order_item}.jpg` : '';
                 const args = [
                     order_id,
@@ -141,9 +144,12 @@ const addOrder = async (req, res) => {
                     user_id,
                     address_id,
                     order_status,
+                    product_id,
+                    product_desc,
                     item_desc,
                     photo_url_db,
                     order_id_app,
+                    price,
                     creation_date,
                     update_date
                 ];
@@ -477,6 +483,18 @@ const getPharmacyOrders = async (req, res) => {
     }
 }
 
+const getProduct = async (req, res) => {
+    try {
+        const args = req.query;
+        const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_product.sql`), 'utf8');
+        const results = await query(q, 'select', [args.searchCriteria]);
+        res.status(200).json(results);
+    } catch (err) {
+        console.log('Error at queries.js -> getProduct() :', err);
+        //logger.save('ERR', 'BACK-END', `queries.js -> getProduct(): ${err}`, logExtra);
+    }
+}
+
 // Use of 'pool.connect' to be able to rollback same pool of transactions in case of failure
 const query = async (q, op, args) => {
     try {
@@ -523,6 +541,7 @@ module.exports = {
     getPharmacyChats,
     getPharmacyOrders,
     movePhotosToS3,
+    getProduct,
     query,
 };
 

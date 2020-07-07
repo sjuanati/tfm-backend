@@ -23,6 +23,9 @@ const Order = db.define('Order', {
   item_desc: {
     type: Sequelize.STRING
   },
+  product_desc: {
+    type: Sequelize.STRING
+  },
   photo: {
     type: Sequelize.STRING
   },

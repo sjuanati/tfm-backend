@@ -1,11 +1,15 @@
 INSERT INTO public.product (
+    id,
     product_id,
-    product_id_app,
+    product_code,
     product_desc,
     search_criteria,
     supplier_id,
-    dose,
+    dose_qty,
+    dose_form,
     ean13,
+    prescription,
+    prescription_desc,
     price,
     creation_date,
     update_date
@@ -20,5 +24,9 @@ VALUES (
     $7,
     $8,
     $9,
-    $10
+    $10,
+    $11,
+    $12,
+    $13,
+    $14
 );
