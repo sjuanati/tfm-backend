@@ -56,11 +56,13 @@ const getOrderItemUser = async (req, res) => {
 };
 
 const getOrderPharmacy = async (req, res) => {
+    console.log('pharmacy_id : ', req.query.pharmacy_id);
     try {
         const args = req.query;
         logExtra = `pharmacy: ${args.pharmacy_id}`;
         const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_pharmacy.sql`), 'utf8');
         const results = await query(q, 'select', [args.pharmacy_id]);
+console.log('results : ', results);
         res.status(200).json(results);
     } catch (err) {
         logger.save('ERR', 'BACK-END', `queries.js -> getOrderPharmacy(): ${err}`, logExtra);

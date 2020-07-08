@@ -154,19 +154,16 @@ exports.getOrders = async (req, res) => {
 
 exports.cancelOrder = async (req, res) => {
   let body = req.body;
+  const order_id = body.order_id
+  const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
 
   try {
-    await Order.update({
-      status: 6,
-      comments: body.comments,
-      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
-    }, {
-      where: {
-        order_id: body.order_id,
-        pharmacy_id: body.pharmacy_id
-      }
-    });
-    let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
+    // Update Order status in DB
+    const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_status.sql`), 'utf8');
+    await query(q, 'select', [order_id, 6, update_date]);
+
+    // Refresh Order items
+    let orderItems = await getOrderItemsPharmacy(body.pharmacy_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
     if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
@@ -180,18 +177,16 @@ exports.cancelOrder = async (req, res) => {
 
 exports.cancelOrderUser = async (req, res) => {
   let body = req.body;
+  const order_id = body.order_id
+  const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
 
-  try {
-    await Order.update({
-      status: 6,
-      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
-    }, {
-      where: {
-        order_id: body.order_id,
-        user_id: body.user_id
-      }
-    });
-    let orderItems = await getItemOrdersUser(body.user_id, body.order_id);
+   try {
+    // Update Order status in DB
+    const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_status.sql`), 'utf8');
+    await query(q, 'select', [order_id, 6, update_date]);
+
+    // Refresh Order items
+    let orderItems = await getOrderItemsUser(body.user_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
     if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
@@ -205,18 +200,17 @@ exports.cancelOrderUser = async (req, res) => {
 
 exports.deliverOrder = async (req, res) => {
   let body = req.body;
+  const order_id = body.order_id
+  const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
 
   try {
-    await Order.update({
-      status: 5,
-      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
-    }, {
-      where: {
-        order_id: body.order_id,
-        pharmacy_id: body.pharmacy_id
-      }
-    });
-    let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
+
+    // Update Order status in DB
+    const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_status.sql`), 'utf8');
+    await query(q, 'select', [order_id, 5, update_date]);
+
+    // Refresh Order items
+    let orderItems = await getOrderItemsPharmacy(body.pharmacy_id, body.order_id);
     
     // Add Order data into Log table and Order hash into Blockchain
     if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
@@ -243,12 +237,11 @@ exports.confirmOrder = async (req, res) => {
         pharmacy_id: body.pharmacy_id
       }
     });
-    let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
+    let orderItems = await getOrderItemsPharmacy(body.pharmacy_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
     if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
-    //else res.status(400).send(`Error al informar precio en el pedido`);
-    else res.status(400).send(`Error al confirmnar el pedido`);
+    else res.status(400).send(`Error confirming order`);
 
   } catch (e) {
     console.log(e);
@@ -256,36 +249,12 @@ exports.confirmOrder = async (req, res) => {
   }
 };
 
-// exports.acceptPriceOrder = async (req, res) => {
-//   let body = req.body;
-  
-//   try {
-//     await Order.update({
-//       status: 3,
-//       update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
-//     }, {
-//       where: {
-//         order_id: body.order_id,
-//         user_id: body.user_id
-//       }
-//     });
-//     let orderItems = await getItemOrdersUser(body.user_id, body.order_id);
-
-//     // Add Order data into Log table and Order hash into Blockchain
-//     if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
-//     else res.status(400).send(`Error al acceptar precio en el pedido`);
-
-//   } catch (e) {
-//     console.log(e);
-//     res.status(400).json({error: 'Error delivering order'});
-//   }
-// };
 
 exports.onTheWayOrder = async (req, res) => {
   let body = req.body;
 
   try {
-    let orderUpdated = await Order.update({
+    await Order.update({
       status: 3,
       update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
@@ -294,15 +263,15 @@ exports.onTheWayOrder = async (req, res) => {
         pharmacy_id: body.pharmacy_id
       }
     });
-    let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
+    let orderItems = await getOrderItemsPharmacy(body.pharmacy_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
     if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
-    else res.status(400).send(`Error al enviar el pedido`);
+    else res.status(400).send(`Error shipping Order`);
 
   } catch (e) {
     console.log(e);
-    res.status(400).json({error: 'Error putting on the way an order'});
+    res.status(400).json({error: 'Error shipping Order'});
   }
 };
 
@@ -310,41 +279,72 @@ exports.readyOrder = async (req, res) => {
   let body = req.body;
 
   try {
-    let orderUpdated = await Order.update({
+    await Order.update({
       status: 4,
       update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
       where: {
-        status: 3,
         order_id: body.order_id,
         pharmacy_id: body.pharmacy_id
       }
     });
-    let orderItems = await getItemOrders(body.pharmacy_id, body.order_id);
+    let orderItems = await getOrderItemsPharmacy(body.pharmacy_id, body.order_id);
 
     // Add Order data into Log table and Order hash into Blockchain
     if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
-    else res.status(400).send(`Error al dejar el pedido listo`);
+    else res.status(400).send(`Error delivering order`);
 
   } catch (e) {
     console.log(e);
-    res.status(400).json({error: 'Error making ready order'});
+    res.status(400).json({error: 'Error delivering order'});
   }
 };
 
-const getItemOrders = (pharmacy_id, order_id) => {
+
+exports.changeOrderStatus = async (req, res) => {
+
+    // Retrieve parameters
+    let body = req.body;
+    const status = body.status;
+    const user_id = body.user_id;
+    const order_id = body.order_id;
+    const pharmacy_id = body.pharmacy_id;
+    const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
+  
+    try {
+  
+      // Update Order status in DB
+      const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_status.sql`), 'utf8');
+      await query(q, 'update', [order_id, status, update_date]);
+
+      // Refresh Order items
+      const orderItems = (user_id) 
+        ? await getOrderItemsUser(user_id, order_id)
+        : await getOrderItemsPharmacy(pharmacy_id, order_id);
+      
+      // Add Order data into Log table and Order hash into Blockchain
+      if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
+      else res.status(400).send(`Error on Order Status change`);
+  
+    } catch (e) {
+
+      console.log(e);
+      res.status(400).json({error: 'Error on Order Status change'});
+    }
+  };
+
+
+const getOrderItemsPharmacy = (pharmacy_id, order_id) => {
   return new Promise(async (resolve, reject) => {
     const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_item_pharmacy.sql`), 'utf8');
     const results = await query(q, 'select', [pharmacy_id, order_id]);
-    console.log(results);
     resolve(results);
   })
 };
-const getItemOrdersUser = (user_id, order_id) => {
+const getOrderItemsUser = (user_id, order_id) => {
   return new Promise(async (resolve, reject) => {
     const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_item_user.sql`), 'utf8');
     const results = await query(q, 'select', [user_id, order_id]);
-    console.log(results);
     resolve(results);
   })
 };
