@@ -10,6 +10,7 @@
         "ean13": "8470006602560",
         "prescription": true,
         "prescription_desc": "Sujeto A Prescripción Médica",
+        "leaflet_url": "https://cima.aemps.es/cima/dochtml/p/69477/P_69477.html",
         "price": 0.86
     },
     {
@@ -23,6 +24,7 @@
         "ean13": "8470006582442",
         "prescription": false,
         "prescription_desc": "Sin receta",
+        "leaflet_url": "https://cima.aemps.es/cima/dochtml/p/68330/P_68330.html",
         "price": 0.67
     },
     {
@@ -36,6 +38,7 @@
         "ean13": "8470006620250",
         "prescription": true,
         "prescription_desc": "Sujeto a prescripción médica",
+        "leaflet_url": "https://cima.aemps.es/cima/dochtml/p/70310/P_70310.html",
         "price": 2.5
     },
     {
@@ -49,6 +52,7 @@
         "ean13": "8470007548461",
         "prescription": true,
         "prescription_desc": "Sujeto a prescripción médica",
+        "leaflet_url": "https://cima.aemps.es/cima/dochtml/p/65251/P_65251.html",
         "price": 1.97
     },
     {
@@ -62,6 +66,7 @@
         "ean13": "8470007295662",
         "prescription": true,
         "prescription_desc": "Sujeto a prescripción médica",
+        "leaflet_url": "https://cima.aemps.es/cima/dochtml/p/47633/P_47633.html",
         "price": 2.26
     },
     {
@@ -75,6 +80,7 @@
         "ean13": "8470007050681",
         "prescription": true,
         "prescription_desc": "Sujeto a prescripción médica. Psicotrópicos",
+        "leaflet_url": "https://cima.aemps.es/cima/dochtml/p/58784/P_58784.html",
         "price": 8.07
     }
 ]

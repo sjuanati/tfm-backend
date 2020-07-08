@@ -44,6 +44,9 @@ const Order = db.define('Order', {
   update_date: {
     type: Sequelize.DATE
   },
+  price: {
+    type: Sequelize.INTEGER
+  },
   total_price: {
     type: Sequelize.INTEGER
   },

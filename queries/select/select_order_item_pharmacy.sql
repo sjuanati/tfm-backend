@@ -3,6 +3,7 @@ SELECT
 	o.order_item,
     o.order_id_app,
 	o.item_desc,
+    o.product_desc,
 	o.photo,
 	o.status,
 	os.status_desc,

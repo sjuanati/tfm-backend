@@ -15,7 +15,7 @@ INSERT INTO
     "price",
 --    "tbc4",
 --    "tbc5",
---    "total_price",
+    "total_price",
     "creation_date",
     "update_date")
 VALUES
@@ -34,7 +34,7 @@ VALUES
     $12,
 --    '',
 --    '',
---    '',
     $13,
-    $14);
+    $14,
+    $15);
 

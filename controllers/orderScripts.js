@@ -228,13 +228,14 @@ exports.deliverOrder = async (req, res) => {
   }
 };
 
-exports.informPriceOrder = async (req, res) => {
+exports.confirmOrder = async (req, res) => {
+//exports.informPriceOrder = async (req, res) => {
   let body = req.body;
 
   try {
     await Order.update({
       status: 2,
-      total_price: body.totalPrice,
+      //total_price: body.totalPrice,
       update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
     }, {
       where: {
@@ -246,38 +247,39 @@ exports.informPriceOrder = async (req, res) => {
 
     // Add Order data into Log table and Order hash into Blockchain
     if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
-    else res.status(400).send(`Error al informar precio en el pedido`);
+    //else res.status(400).send(`Error al informar precio en el pedido`);
+    else res.status(400).send(`Error al confirmnar el pedido`);
 
   } catch (e) {
     console.log(e);
-    res.status(400).json({error: 'Error delivering order'});
+    res.status(400).json({error: 'Error confirming order'});
   }
 };
 
-exports.acceptPriceOrder = async (req, res) => {
-  let body = req.body;
+// exports.acceptPriceOrder = async (req, res) => {
+//   let body = req.body;
   
-  try {
-    await Order.update({
-      status: 3,
-      update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
-    }, {
-      where: {
-        order_id: body.order_id,
-        user_id: body.user_id
-      }
-    });
-    let orderItems = await getItemOrdersUser(body.user_id, body.order_id);
+//   try {
+//     await Order.update({
+//       status: 3,
+//       update_date: moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss')
+//     }, {
+//       where: {
+//         order_id: body.order_id,
+//         user_id: body.user_id
+//       }
+//     });
+//     let orderItems = await getItemOrdersUser(body.user_id, body.order_id);
 
-    // Add Order data into Log table and Order hash into Blockchain
-    if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
-    else res.status(400).send(`Error al acceptar precio en el pedido`);
+//     // Add Order data into Log table and Order hash into Blockchain
+//     if (await trace.saveOrderTrace(body.order_id)) res.status(200).send({order: orderItems});
+//     else res.status(400).send(`Error al acceptar precio en el pedido`);
 
-  } catch (e) {
-    console.log(e);
-    res.status(400).json({error: 'Error delivering order'});
-  }
-};
+//   } catch (e) {
+//     console.log(e);
+//     res.status(400).json({error: 'Error delivering order'});
+//   }
+// };
 
 exports.onTheWayOrder = async (req, res) => {
   let body = req.body;

@@ -107,8 +107,8 @@ const getOrderLinePhoto = async (req, res) => {
 // Table is denormalized to enhance performance when inserting/selecting (1 unique table)
 const addOrder = async (req, res) => {
     try {
-        const { order, user, user_id } = req.body;
-        logExtra = `user: ${user_id} `;
+        const { order, user, total_price } = req.body;
+        logExtra = `user: ${user.id} `;
 
         // Save items with photo in an array, to be sent back to the front-end, from where axios call
         // will be performed at multer routes to save photos in server and send them to S3.
@@ -121,7 +121,7 @@ const addOrder = async (req, res) => {
             const order_id = uuidv4();              // RFC-compliant UUID
             const order_status = 1;                 // Status: 1 'Pending'
             const pharmacy_id = user.favPharmacyID;
-            const address_id = user_id;
+            const address_id = user.id;
             const creation_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
             const update_date = creation_date;
 
@@ -141,7 +141,7 @@ const addOrder = async (req, res) => {
                     order_id,
                     order_item,
                     pharmacy_id,
-                    user_id,
+                    user.id,
                     address_id,
                     order_status,
                     product_id,
@@ -150,6 +150,7 @@ const addOrder = async (req, res) => {
                     photo_url_db,
                     order_id_app,
                     price,
+                    total_price,
                     creation_date,
                     update_date
                 ];

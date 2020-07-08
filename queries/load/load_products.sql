@@ -10,6 +10,7 @@ INSERT INTO public.product (
     ean13,
     prescription,
     prescription_desc,
+    leaflet_url,
     price,
     creation_date,
     update_date
@@ -28,5 +29,6 @@ VALUES (
     $11,
     $12,
     $13,
-    $14
+    $14,
+    $15
 );
