@@ -7,7 +7,9 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('../shared/query');
 const eth = require('../controllers/ethereumScript');
-let hash = '';
+
+let hashOrderID = '';
+let hashOrderValue = '';
 
 const saveOrderTrace = async (order_id) => {
 
@@ -41,7 +43,7 @@ const saveOrderTrace = async (order_id) => {
     }
 
     // Save Order data into DB and save Order hash into Blockchain
-    return (await saveOrderTraceDB(params) && await eth.saveOrderTraceEth(hash, params.trace_id)) ? true : false;
+    return (await saveOrderTraceDB(params) && await eth.saveOrderTraceEth(hashOrderID, hashOrderValue, params.trace_id)) ? true : false;
 }
 
 // Save Order data into trace table (DB)
@@ -50,8 +52,15 @@ const saveOrderTraceDB = (params) => {
 
         try {
 
+            hashOrderID = '0x' + crypto
+                .createHash('sha256')
+                .update(
+                    params.order_id
+                )
+                .digest('hex');
+
             // Create hash on log record
-            hash = crypto
+            hashOrderValue = '0x' + crypto
                 .createHash('sha256')
                 .update(
                     params.trace_id +
@@ -77,7 +86,7 @@ const saveOrderTraceDB = (params) => {
                 params.user_id,
                 params.order_items,
                 params.product_ids,
-                '0x' + hash,
+                hashOrderValue,
                 params.update_date,
             ]);
 
@@ -95,13 +104,15 @@ const decodeError = (err) => {
 
     // Parses error and returns a 'more human' error description
     err = err.toLowerCase();
-    if (err.includes('invalid arrayify value')) 
+    if (err.includes('invalid arrayify value'))
         return 'Invalid hash';
-    else if (err.includes('invalid json rpc response')) 
+    else if (err.includes('invalid json rpc response'))
         return 'No connection to Blockchain';
     else if (err.includes('hash not found'))
         return 'Hash mismatch'
-    else 
+    else if (err.includes('incorrect data length'))
+        return 'Incorrect data length'
+    else
         return 'Unrecognized error';
 
 }
@@ -115,12 +126,25 @@ const getOrderTraceDB = async (req, res) => {
         const resDB = await query(q, 'select', [args.order_id]);
 
         //TODO: Optionally re-build the hash through the order data stored in the DB, instead of getting the hash directly from the DB
-        
-        // Check DB Hash vs. Ethereum Hash for Order data integrity (check every order status change)
+
+        // *** REWRITE!! *** Check DB Hash vs. Ethereum Hash for Order data integrity (check every order status change)
         if (resDB && resDB !== 400) {
-            for (let i=0; i<resDB.length; i++) {
-                console.log('item ',i,' -> ', resDB[i]);
-                const {result, error} =  await eth.getOrderTraceEth(resDB[i].db_hash);
+
+            hashOrderID = '0x' + crypto
+                .createHash('sha256')
+                .update(
+                    args.order_id
+                )
+                .digest('hex');
+
+            for (let i = 0; i < resDB.length; i++) {
+                const params = {
+                    orderID_hash: hashOrderID,
+                    tx_hash: resDB[i].tx_hash,
+                    orderValue_hash: resDB[i].db_hash
+                }
+                console.log('item ', i, ' -> ', resDB[i]);
+                const { result, error } = await eth.getOrderTraceEth(params);
                 resDB[i].error = decodeError(String(error));
                 result ? resDB[i].checksum = true : resDB[i].checksum = false;
             }

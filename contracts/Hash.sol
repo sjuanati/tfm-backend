@@ -22,7 +22,6 @@ contract Hash {
         record[_hash].sender = msg.sender;
         record[_hash].date = now;
         record[_hash].hash = _hash;
-        
         return true;
     }
     

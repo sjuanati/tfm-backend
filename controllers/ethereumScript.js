@@ -5,28 +5,32 @@ const moment = require('moment');
 const tz = require('moment-timezone');
 const Web3 = require('web3');
 const crypto = require('crypto');
-//const { v4: uuidv4 } = require('uuid');
 const { query } = require('../shared/query');
 
 // Blockchain settings (Ganache)
-const url = 'http://127.0.0.1:7545';
-const web3 = new Web3(url);
-const address1 = '0x1D3eFf2b566b5107EDBA436f125B8182A42dB045';
-const address2 = '0x892368edb8e1FF600E8899d2691a683B46ad1BC0';
-const contractAddress = '0xB8eE700312Eed7B15448345ffe0c9C856529794c';
+const URL_HTTP = 'http://127.0.0.1:7545';
+const URL_WEBSOCKET = 'ws://127.0.0.1:7545';
+const web3 = new Web3(URL_HTTP);
+const web3ws = new Web3(URL_WEBSOCKET);
+const fromAddress = '0x1D3eFf2b566b5107EDBA436f125B8182A42dB045';  // TODO: capture error if wrong address
+//const contractAddress = '0xB8eE700312Eed7B15448345ffe0c9C856529794c';  // Hash.sol
+//const contractAddress = '0x814e872e41a311448e5cC0e209F7c0ad78A6574a';  // Hash2.sol
+//const contractAddress = '0xBD512D02A57Df2E6C4Aea9065996b5A000787DD8';  // Hash3.sol
+const contractAddress = '0xf9adbCC0B2E390f0CA8E38C630fE9c3099229d1C';  // Hash4.sol
 const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
 const NULL_DATE = '0';
-const ABI_DATA = fs.readFileSync(path.join(__dirname, `/../contracts/Hash.abi`), 'utf8');
+const ABI_DATA = fs.readFileSync(path.join(__dirname, `/../contracts/Hash4.abi`), 'utf8');
 const HashContract = new web3.eth.Contract(JSON.parse(ABI_DATA));
+const HashContractWS = new web3ws.eth.Contract(JSON.parse(ABI_DATA), contractAddress);
 HashContract.options.address = contractAddress;
 
 
 // Save Order hash into Ethereum and save returned Tx hash into the DB
-const saveOrderTraceEth = (hash, log_id) => {
-    return new Promise(async (resolve, reject) => {
+const saveOrderTraceEth = (hashOrderID, hashOrderValue, log_id) => {
+    return new Promise(async (resolve) => {
 
         // Save Order hash into Ethereum within the Hash Contract
-        HashContract.methods.saveHash('0x' + hash).send({ from: address1 })
+        HashContract.methods.saveHash(hashOrderID, hashOrderValue).send({ from: fromAddress })
             .then(async res => {
 
                 // Save transaction hash into DB
@@ -39,55 +43,90 @@ const saveOrderTraceEth = (hash, log_id) => {
                     update_date,
                 ]);
                 console.log('Result: ', res);
+                console.log('Events: ', res.events.SaveHash.returnValues);
                 if (resDB !== 400) resolve(true);
-                else reject(false);
+                else resolve(false);
             })
             .catch(err => {
                 console.log('Error in ethereumScript.js -> saveOrderTraceEth(): ', err);
-                reject(false);
+                resolve(false);
             });
     })
 }
 
 // Retrieve Order hash from Ethereum
-const getOrderTraceEth = (hash) => {
+const getOrderTraceEth = (params) => {
     return new Promise(async (resolve) => {
+
         try {
-            HashContract.methods.getHash(hash).call()
-                .then(res => {
-                    if (res && (res[0] === NULL_ADDRESS || res[1] === NULL_DATE)) {
-                        console.log('No hash found', res);
-                        resolve({
-                            result: false,
-                            error: 'Hash not found'
-                        });
-                    } else {
-                        console.log('Hash found: ', res);
-                        resolve({
-                            result: true,
-                            error: null
-                        })
-                    }
+            HashContractWS.getPastEvents('SaveHash', {
+                filter: {
+                    _orderID: params.orderID_hash,
+                    _orderValue: params.orderValue_hash,
+                },
+                // TODO: OPTIMIZATION: SAVE BLOCK IN DB TO SEARCH ONLY IN THE CORRESPONDING BLOCK
+                fromBlock: 0,
+                toBlock: 'latest',
+                transactionHash: params.tx_hash,
+            })
+                .then(events => {
+                    console.log('Events: ', events);
+                    (events.length > 0) 
+                        ? resolve({ result: true, error: null })
+                        : resolve({ result: false, error: 'Hash not found'});
                 })
                 .catch(err => {
-                    console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
-                    console.log('Error response: ', err.response);
-                    resolve({
-                        result: false,
-                        error: err
-                    });
+                    console.log('Error in ethereumScript.js -> getOrderTraceEth()', err);
+                    resolve({ result: false, error: err });
                 });
-        } catch (err) { 
+
+        } catch (err) {
             console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
             console.log('Error response: ', err.response);
-            resolve({
-                result: false,
-                error: err
-            });
+            resolve({ result: false, error: err });
         };
     })
-
 }
+
+
+// const getOrderTraceEth = (hash) => {
+//     return new Promise(async (resolve) => {
+//         try {
+//             HashContract.methods.getHash(hash).call()
+//                 .then(res => {
+//                     if (res && (res[0] === NULL_ADDRESS || res[1] === NULL_DATE)) {
+//                         console.log('No hash found', res);
+//                         resolve({
+//                             result: false,
+//                             error: 'Hash not found'
+//                         });
+//                     } else {
+//                         console.log('Hash found: ', res);
+//                         resolve({
+//                             result: true,
+//                             error: null
+//                         })
+//                     }
+//                 })
+//                 .catch(err => {
+//                     console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
+//                     console.log('Error response: ', err.response);
+//                     resolve({
+//                         result: false,
+//                         error: err
+//                     });
+//                 });
+//         } catch (err) { 
+//             console.log('Error in ethereumScript.js -> getOrderTraceEth(): ', err);
+//             console.log('Error response: ', err.response);
+//             resolve({
+//                 result: false,
+//                 error: err
+//             });
+//         };
+//     })
+
+// }
 
 module.exports = {
     saveOrderTraceEth,
