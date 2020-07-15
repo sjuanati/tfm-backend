@@ -1,8 +1,8 @@
 let express = require('express');
 let router = express.Router();
-let traceScript = require('../controllers/traceScript');
+let ethOrderTrace = require('../controllers/ethOrderTrace');
 let md_auth = require('../controllers/authenticated');
 
-router.get('/order', md_auth.ensureAuth, traceScript.getOrderTraceDB);
+router.get('/order', md_auth.ensureAuth, ethOrderTrace.getOrderTraceDB);
 
 module.exports = router;

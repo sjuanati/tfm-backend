@@ -18,11 +18,11 @@ contract Hash4 {
     }
 
     /**
-     * @dev Save Order ID and Order Value through log
-     * Emits a {SaveHash} event
+     * @dev Emit event to save Order data using SHA256 to be able to check integrity
+     * of any status change on the Order afterwards
      * Returns a boolean value indicating whether the operation succeeded.
-     * @param _orderID Order ID hash (to be able to find the event by Order ID)
-     * @param _orderValue Order Value hash (to check data integrity afterwards)
+     * @param _orderID SHA256 of the Order ID
+     * @param _orderValue SHA256 of a set of Order fields (Order ID, Order item, Product ID...)
      */
     function saveHash(bytes32 _orderID, bytes32 _orderValue) external isOwner returns (bool) {
         

@@ -4,7 +4,7 @@ const Order = require('../models/order');
 const Chat = require('../models/chat');
 const Message = require('../models/message');
 const {query} = require('./queries');
-const trace = require('./traceScript');
+const trace = require('./ethOrderTrace');
 const moment = require('moment');
 const tz = require('moment-timezone');
 

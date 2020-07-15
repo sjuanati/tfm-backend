@@ -8,7 +8,7 @@ const AWS = require('aws-sdk');
 const multer = require('multer');
 const logger = require('../shared/logRecorder');
 const { v4: uuidv4 } = require('uuid');
-const trace = require('./traceScript');
+const trace = require('./ethOrderTrace');
 
 
 const env = require('../Environment');
