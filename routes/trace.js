@@ -4,5 +4,6 @@ let ethOrderTrace = require('../controllers/ethOrderTrace');
 let md_auth = require('../controllers/authenticated');
 
 router.get('/order', md_auth.ensureAuth, ethOrderTrace.getOrderTraceDB);
+router.get('/order/global', md_auth.ensureAuth, ethOrderTrace.checkGlobalOrderTrace);
 
 module.exports = router;
