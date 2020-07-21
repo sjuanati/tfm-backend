@@ -6,6 +6,7 @@ const moment = require('moment');
 const tz = require('moment-timezone');
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('../shared/query');
+const { earnTokensOnPurchase } = require('../controllers/ethPCToken');
 
 const env = require('../Environment');
 const Cons = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
@@ -13,16 +14,21 @@ const Cons = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Con
 let hashOrderID = '';
 let hashOrderValue = '';
 
-// Blockchain settings (Ganache)
+// Blockchain settings
+// TODO: capture error if wrong address
 const web3 = new Web3(Cons.BLOCKCHAIN.URL_HTTP);
 const web3ws = new Web3(Cons.BLOCKCHAIN.URL_WS);
-const ABI_DATA = fs.readFileSync(path.join(__dirname, `/../contracts/OrderTrace.abi`), 'utf8');
+const ABI_DATA = fs.readFileSync(path.join(__dirname, `/../contracts/Trace/OrderTrace.abi`), 'utf8');
 const Contract = new web3.eth.Contract(JSON.parse(ABI_DATA));
 const ContractWS = new web3ws.eth.Contract(JSON.parse(ABI_DATA), Cons.BLOCKCHAIN.hashContractAddress);
 Contract.options.address = Cons.BLOCKCHAIN.hashContractAddress;
-// TODO: capture error if wrong address
 
 
+/**
+ * @dev Calculates the hash (SHA256) of the Order ID
+ * Returns a the Order ID hash
+ * @param order_id ID of the target Order
+ */
 const generateHashOrderID = (order_id) => {
     return (
         '0x' + crypto
@@ -34,21 +40,27 @@ const generateHashOrderID = (order_id) => {
     );
 }
 
+/**
+ * @dev Calculates the hash (SHA256) of the Order values
+ * Returns a the Order values hash
+ * @param params Order values to calculate the hash (trace_id, order_id, order_date, etc)
+ */
+
 const generateHashOrderValues = (params) => {
     return (
         '0x' + crypto
-        .createHash('sha256')
-        .update(
-            params.trace_id +
-            params.order_id +
-            params.order_id_app +
-            params.order_status +
-            params.order_date +
-            params.pharmacy_id +
-            params.user_id +
-            params.order_items.join('') +
-            params.product_ids.join(''))
-        .digest('hex')
+            .createHash('sha256')
+            .update(
+                params.trace_id +
+                params.order_id +
+                params.order_id_app +
+                params.order_status +
+                params.order_date +
+                params.pharmacy_id +
+                params.user_id +
+                params.order_items.join('') +
+                params.product_ids.join(''))
+            .digest('hex')
     );
 }
 
@@ -60,7 +72,7 @@ const generateHashOrderValues = (params) => {
  * Returns a boolean value indicating whether the operation succeeded.
  * @param order_id ID of created/updated Order
  */
-const saveOrderTrace = async (order_id) => {
+const saveOrderTrace = async (order_id, eth_address) => {
 
     // Get Order data from the DB
     const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order.sql`), 'utf8');
@@ -89,6 +101,8 @@ const saveOrderTrace = async (order_id) => {
         order_items: order_items,
         product_ids: product_ids,
         update_date: res[0].update_date,
+        total_price: res[0].total_price,
+        eth_address: eth_address,
     }
 
     // Return true if Order data was successfully saved into the DB
@@ -132,6 +146,9 @@ const saveOrderTraceDB = (params) => {
 
             // Save hash on Order ID and Order vales in Ethereum asynchronously
             saveOrderTraceEth(params.trace_id);
+
+            // Earn tokens for the purchase of Products
+            earnTokensOnPurchase(params.eth_address, params.total_price);
 
             // Return true if Order data was successfully saved into the DB
             (res !== 400) ? resolve(true) : resolve(false);
@@ -210,7 +227,7 @@ const decodeError = (err) => {
  */
 const getOrderTraceDB = async (req, res) => {
     try {
-        
+
         // Get Order data from the DB (table order_trace)
         const args = req.query;
         const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_trace.sql`), 'utf8');
@@ -220,7 +237,7 @@ const getOrderTraceDB = async (req, res) => {
 
             hashOrderID = generateHashOrderID(args.order_id);
 
-             // For every Order change stored in table <order_trace>, compare the Order data value vs. the one stored in the Blockchain
+            // For every Order change stored in table <order_trace>, compare the Order data value vs. the one stored in the Blockchain
             for (let i = 0; i < resDB.length; i++) {
 
                 hashOrderValue = generateHashOrderValues(resDB[i]);
@@ -251,7 +268,6 @@ const getOrderTraceDB = async (req, res) => {
     }
 }
 
-// 
 /**
  * @dev Check if an Order ID hash and Order values hash is stored in the Blockchain logs
  * Returns true if Order ID hash and Order values hash are found
@@ -292,7 +308,14 @@ const getOrderTraceEth = (params) => {
     })
 }
 
-
+/**
+ * @dev Checks global trace status of a given Order:
+ * Status 'OK': all Order items are validated in the Blockchain
+ * Status 'NOK': at least one of the Order items can't be validated in the Blockchain (wrong hash, no connection to the Blockchain, etc)
+ * Status 'PENDING': at least one of the Order items is being validated in the Blockchain
+ * @param req Input parameters received from the Front-End: All required Order values to perform the hash validation in the Blockchain
+ * @param res Output parameters to be sent to the Front-End: Status ('OK', 'NOK' or 'PENDING')
+ */
 const checkGlobalOrderTrace = async (req, res) => {
     try {
         const args = req.query;
@@ -312,7 +335,7 @@ const checkGlobalOrderTrace = async (req, res) => {
                 tx_hash: resDB[i].tx_hash,
                 block_number: resDB[i].block_number,
             }
-            
+
             if (params.tx_hash && params.block_number) {
                 const { error } = await getOrderTraceEth(params);
                 if (error) outcome = 'NOK';

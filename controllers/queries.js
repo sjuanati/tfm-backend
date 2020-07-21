@@ -170,7 +170,7 @@ const addOrder = async (req, res) => {
             }
             
             // Add Order data into Log table and Order hash into Blockchain
-            if (await trace.saveOrderTrace(order_id)) res.status(201).send(result);
+            if (await trace.saveOrderTrace(order_id, user.eth_address)) res.status(201).send(result);
             else res.status(400).send(`Error al confirmar el pedido`);
             
         } else {

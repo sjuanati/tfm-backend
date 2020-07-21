@@ -13,6 +13,7 @@ let audioRouter = require('./routes/audio');
 let orderRouter = require('./routes/order');
 const logRouter = require('./routes/log');
 const traceRouter = require('./routes/trace');
+const tokenRouter = require('./routes/token');
 const prescriptionRouter = require('./routes/prescription');
 const productRouter = require('./routes/product');
 const Chat = require('./models/chat');
@@ -56,6 +57,7 @@ app.use('/chat', chatRouter);
 app.use('/order', orderRouter);
 app.use('/log', logRouter);
 app.use('/trace', traceRouter);
+app.use('/token', tokenRouter);
 app.use('/prescription', prescriptionRouter);
 app.use('/product', productRouter);
 
