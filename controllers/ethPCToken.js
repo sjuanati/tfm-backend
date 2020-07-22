@@ -43,7 +43,7 @@ const earnTokensOnPurchase = async (eth_address, total_price) => {
             .then(res => {
                 console.log('Resultat: ', res);
                 console.log('Events approval: ', res.events.Approval);
-                console.log('Events transfer: ', res.events.Transfer.returnValues);
+                //console.log('Events transfer: ', res.events.Transfer.returnValues);
             })
             .catch(err => {
                 console.log('Error in ethPCToken.js (A) -> checkBalance(): ', err);

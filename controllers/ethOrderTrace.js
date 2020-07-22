@@ -15,14 +15,26 @@ let hashOrderID = '';
 let hashOrderValue = '';
 
 // Blockchain settings
-// TODO: capture error if wrong address
-const web3 = new Web3(Cons.BLOCKCHAIN.URL_HTTP);
+const OPTIONS = {
+    defaultBlock: "latest",
+    transactionConfirmationBlocks: 1,
+    transactionBlockTimeout: 5
+};
+const web3 = new Web3(Cons.BLOCKCHAIN.URL_HTTP, null, OPTIONS);
 const web3ws = new Web3(Cons.BLOCKCHAIN.URL_WS);
+web3.transactionConfirmationBlocks = 1;
+web3.eth.transactionConfirmationBlocks = 1;
+web3.shh.transactionConfirmationBlocks = 1;
 const ABI_DATA = fs.readFileSync(path.join(__dirname, `/../contracts/Trace/OrderTrace.abi`), 'utf8');
 const Contract = new web3.eth.Contract(JSON.parse(ABI_DATA));
 const ContractWS = new web3ws.eth.Contract(JSON.parse(ABI_DATA), Cons.BLOCKCHAIN.hashContractAddress);
 Contract.options.address = Cons.BLOCKCHAIN.hashContractAddress;
 
+
+
+console.log(web3.transactionConfirmationBlocks)
+console.log(web3.eth.transactionConfirmationBlocks)
+// TODO: capture error if wrong address
 
 /**
  * @dev Calculates the hash (SHA256) of the Order ID
@@ -161,39 +173,47 @@ const saveOrderTraceDB = (params) => {
 }
 
 /**
- * @dev Calls method 'saveHash' from contract <Hash> and saves the hashOrderID and hashOrderValue in the Blockchain as logs
+ * @dev Calls method 'saveHash' from contract <OrderTrace> and saves the hashOrderID and hashOrderValue in the Blockchain as logs
  * Returns true if the log was successfully emitted in the Blockchain and the output was successfully saved into the DB
  * @param trace_id ID for the record to be saved into the DB (table <order_trace)
  */
-const saveOrderTraceEth = (log_id) => {
+const saveOrderTraceEth = async (log_id) => {
 
-    // Call 'Hash' contract to emmit the hashes for Order ID and Order values
-    Contract.methods.saveHash(hashOrderID, hashOrderValue).send({ from: Cons.BLOCKCHAIN.appOwnerAddress })
-        .then(async res => {
+    const encodedABI = Contract.methods.saveHash(hashOrderID, hashOrderValue).encodeABI();
+    const nonce = await web3.eth.getTransactionCount(Cons.BLOCKCHAIN.appOwnerAddress);
+    const tx = {
+        gas: 1500000,
+        gasPrice: '30000000000',
+        from: Cons.BLOCKCHAIN.appOwnerAddress,
+        data: encodedABI,
+        chainId: 5777,
+        to: Cons.BLOCKCHAIN.hashContractAddress,
+        nonce: nonce,
+    };
+    const privateKey = '0xadd3e303a6a27a93b4989d1807ab5a56aaed64410d2df0eada19dc55e98e3b25';
 
-            // Save returned tx hash & block number from Ethereum into the DB (table order_trace)
-            const txhash = res.transactionHash;
-            const blockNumber = res.blockNumber;
-            const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_trace.sql`), 'utf8');
-            const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
-            /*const resDB = */ await query(q, 'update', [
-                log_id,
-                txhash,
-                blockNumber,
-                update_date,
-            ]);
-
-            // Show results in console
-            console.log('Result: ', res);
-            console.log('Events: ', res.events.SaveHash.returnValues);
-
-            // TODO: manage if error when saving into DB
-            // if (resDB !== 400) resolve(true);
-            // else resolve(false);
+    web3.eth.accounts.signTransaction(tx, privateKey)
+        .then(signed => {
+            web3.eth.sendSignedTransaction(signed.rawTransaction)
+                .then(async res => {
+                    // Save returned tx hash & block number from Ethereum into the DB (table order_trace)
+                    const txhash = res.transactionHash;
+                    const blockNumber = res.blockNumber;
+                    const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_trace.sql`), 'utf8');
+                    const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
+                    await query(q, 'update', [
+                        log_id,
+                        txhash,
+                        blockNumber,
+                        update_date,
+                    ]);
+                    console.log('Resultat: ', res);
+                })
+                .catch(err => {
+                    console.log('Error in ethOrderTrace.js -> saveOrderTraceEth(): ', err);
+                });
         })
-        .catch(err => {
-            console.log('Error in ethOrderTrace.js -> saveOrderTraceEth(): ', err);
-        });
+        .catch(err => console.log('Errrrr : ', err));
 }
 
 /**
@@ -209,7 +229,7 @@ const decodeError = (err) => {
     else if ((err.includes('invalid json rpc response')) || (err.includes('connection not open on send')))
         return 'No connection to Blockchain';
     else if (err.includes('hash not found'))
-        return 'Hash mismatch'
+        return 'Hash not found'
     else if (err.includes('incorrect data length'))
         return 'Incorrect data length'
     else
@@ -287,8 +307,8 @@ const getOrderTraceEth = (params) => {
                     _orderValue: params.orderValue_hash,
                 },
                 fromBlock: params.block_number,
-                toBlock: params.block_number,
-                transactionHash: params.tx_hash,
+                //toBlock: params.block_number,
+                //transactionHash: params.tx_hash,
             })
                 .then(events => {
                     console.log('Events: ', events);
