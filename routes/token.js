@@ -4,7 +4,7 @@ let ethPCToken = require('../controllers/ethPCToken');
 let md_auth = require('../controllers/authenticated');
 
 router.get('/get/balance', md_auth.ensureAuth, ethPCToken.checkBalance);
-//router.get('/earnTokensOnPurchase', md_auth.ensureAuth, ethPCToken.earnTokensOnPurchase);
+router.get('/earnTokens', md_auth.ensureAuth, ethPCToken.earnTokens);
 
 module.exports = router;
 
