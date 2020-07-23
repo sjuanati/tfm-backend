@@ -22,18 +22,13 @@ const OPTIONS = {
 };
 const web3 = new Web3(Cons.BLOCKCHAIN.URL_HTTP, null, OPTIONS);
 const web3ws = new Web3(Cons.BLOCKCHAIN.URL_WS);
-web3.transactionConfirmationBlocks = 1;
-web3.eth.transactionConfirmationBlocks = 1;
-web3.shh.transactionConfirmationBlocks = 1;
+// web3.transactionConfirmationBlocks = 1;
+// web3.eth.transactionConfirmationBlocks = 1;
+// web3.shh.transactionConfirmationBlocks = 1;
 const ABI_DATA = fs.readFileSync(path.join(__dirname, `/../contracts/Trace/OrderTrace.abi`), 'utf8');
 const Contract = new web3.eth.Contract(JSON.parse(ABI_DATA));
 const ContractWS = new web3ws.eth.Contract(JSON.parse(ABI_DATA), Cons.BLOCKCHAIN.hashContractAddress);
 Contract.options.address = Cons.BLOCKCHAIN.hashContractAddress;
-
-
-
-console.log(web3.transactionConfirmationBlocks)
-console.log(web3.eth.transactionConfirmationBlocks)
 // TODO: capture error if wrong address
 
 /**
