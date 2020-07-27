@@ -23,9 +23,16 @@ contract PCToken is ERC20 {
         _;
     }
 
-    // Earn tokens when a User purchases Products
+    // Earn tokens by purchasing products
     function earnTokensOnPurchase(address _recipient, uint256 _amount) external isOwner {
         approve(owner, _amount);
         transferFrom(owner, _recipient, _amount);
+    }
+
+    // TODO**************************
+    // A is PharmaChain as meta-transactor, B is Purchaser (uses tokens to pay), C is Receiver (receives tokens)
+    // Spend tokens to purchase products (pay products using tokens instead of fiat)
+    function spendTokensOnPurchase(address _recipient, uint256 _amount) external isOwner {
+
     }
 }

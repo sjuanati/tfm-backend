@@ -498,6 +498,17 @@ const getProduct = async (req, res) => {
     }
 }
 
+const getProductLast5 = async (req, res) => {
+    try {
+        const args = req.query;
+        const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_product_last5.sql`), 'utf8');
+        const results = await query(q, 'select', [args.user_id]);
+        res.status(200).json(results);
+    } catch (err) {
+        console.log('Error at queries.js -> getProductLast5() :', err);
+    }
+}
+
 // Use of 'pool.connect' to be able to rollback same pool of transactions in case of failure
 const query = async (q, op, args) => {
     try {
@@ -545,6 +556,7 @@ module.exports = {
     getPharmacyOrders,
     movePhotosToS3,
     getProduct,
+    getProductLast5,
     query,
 };
 
