@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: TBC
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.2;
 
 import "./ERC20.sol";
 
 // PharmaChainToken (PCToken)
 contract PCToken is ERC20 {
-    uint constant _initial_supply = 2100000000;
+    uint constant _initial_supply = 2000000000 * (10 ** uint256(18));
     string constant _name = "PharmaChainToken";
     string constant _symbol = "PCT";
 
@@ -23,16 +23,21 @@ contract PCToken is ERC20 {
         _;
     }
 
-    // Earn tokens by purchasing products
+    // Earn tokens when a User purchases Products
     function earnTokensOnPurchase(address _recipient, uint256 _amount) external isOwner {
-        approve(owner, _amount);
-        transferFrom(owner, _recipient, _amount);
-    }
-
-    // TODO**************************
-    // A is PharmaChain as meta-transactor, B is Purchaser (uses tokens to pay), C is Receiver (receives tokens)
-    // Spend tokens to purchase products (pay products using tokens instead of fiat)
-    function spendTokensOnPurchase(address _recipient, uint256 _amount) external isOwner {
-
+        require(_amount > 0, "Amount must be greater than 0");
+        
+        // Earn 2,5% if amount spent is <=20 EUR, 5% if amount spent is <=50 EUR and 10% if amount spent is > 50 EUR
+        uint256 result;
+        if (_amount <= 20) {
+            result = _amount.mul(25).div(1000);
+        } else if (_amount <= 50) {
+            result = _amount.mul(50).div(1000);
+        } else if (_amount > 50) {
+            result = _amount.mul(100).div(1000);
+        }
+        
+        approve(owner, result);
+        transferFrom(owner, _recipient, result);
     }
 }

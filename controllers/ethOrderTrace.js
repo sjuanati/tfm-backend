@@ -174,6 +174,7 @@ const saveOrderTraceDB = (params) => {
  */
 const saveOrderTraceEth = async (log_id) => {
 
+    // Prepare transaction
     const encodedABI = Contract.methods.saveHash(hashOrderID, hashOrderValue).encodeABI();
     const nonce = await web3.eth.getTransactionCount(Cons.BLOCKCHAIN.appOwnerAddress);
     const tx = {
@@ -185,10 +186,9 @@ const saveOrderTraceEth = async (log_id) => {
         to: Cons.BLOCKCHAIN.hashContractAddress,
         nonce: nonce,
     };
-    //const privateKey = '0xadd3e303a6a27a93b4989d1807ab5a56aaed64410d2df0eada19dc55e98e3b25';
-    const privateKey = '0x985a5e1e6adff2e194cda867c0a053ed4982433bba14d132530635e55e8d1914';
 
-    web3.eth.accounts.signTransaction(tx, privateKey)
+    // Sign transaction
+    web3.eth.accounts.signTransaction(tx, Cons.BLOCKCHAIN.appOwnerKey)
         .then(signed => {
             web3.eth.sendSignedTransaction(signed.rawTransaction)
                 .then(async res => {
@@ -206,10 +206,13 @@ const saveOrderTraceEth = async (log_id) => {
                     console.log('Resultat: ', res);
                 })
                 .catch(err => {
-                    console.log('Error in ethOrderTrace.js -> saveOrderTraceEth(): ', err);
+                    console.log('Error in ethOrderTrace.js (A) -> saveOrderTraceEth(): ', err);
                 });
         })
-        .catch(err => console.log('Errrrr : ', err));
+        .catch(err => {
+            console.log('Error in ethOrderTrace.js (B) -> saveOrderTraceEth(): ', err);
+            //TODO: if any error in Blockchain (ex: wrong signature), User won't be aware. Warning?
+        });
 }
 
 /**

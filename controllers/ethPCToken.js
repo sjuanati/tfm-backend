@@ -23,8 +23,9 @@ const checkBalance = async (req, res) => {
 
     Contract.methods.balanceOf(args.recipient).call()
         .then(resDB => {
-            console.log('Resultat: ', resDB);
-            res.send(resDB);
+            const amount = Web3.utils.fromWei(resDB);
+            console.log('Resultat: ', amount);
+            res.send(amount);
         })
         .catch(err => {
             console.log('Error in ethPCToken.js (A) -> checkBalance(): ', err);
@@ -35,11 +36,13 @@ const checkBalance = async (req, res) => {
 
 const earnTokensOnPurchase = async (eth_address, total_price) => {
     try {
-        //TODO: decimal values from the total price into tokens!
-        //let wei = 1000000000000000000;
-        //let tokens = bn(String(total_price)).times(String(wei));
-        const tokens = Math.round(total_price);
-        Contract.methods.earnTokensOnPurchase(eth_address, tokens).send({ from: Cons.BLOCKCHAIN.appOwnerAddress })
+
+        // Add 18 decimals to the amount in order to be compliant with the ERC20 18 decimals
+        console.log('price before: ',total_price);
+        const amount = Web3.utils.toWei(total_price.toString());
+        console.log('after price: ', amount);
+
+        Contract.methods.earnTokensOnPurchase(eth_address, amount).send({ from: Cons.BLOCKCHAIN.appOwnerAddress })
             .then(res => {
                 console.log('Resultat: ', res);
                 console.log('Events approval: ', res.events.Approval);
