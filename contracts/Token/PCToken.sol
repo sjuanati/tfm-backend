@@ -4,8 +4,9 @@ pragma solidity ^0.6.2;
 
 import "./ERC20.sol";
 
-// PharmaChainToken (PCToken)
+// PharmaChainToken (PCT)
 contract PCToken is ERC20 {
+
     uint constant _initial_supply = 2000000000 * (10 ** uint256(18));
     string constant _name = "PharmaChainToken";
     string constant _symbol = "PCT";
@@ -26,7 +27,7 @@ contract PCToken is ERC20 {
     // Earn tokens when a User purchases Products
     function earnTokensOnPurchase(address _recipient, uint256 _amount) external isOwner {
         require(_amount > 0, "Amount must be greater than 0");
-        
+
         // Earn 2,5% if amount spent is <=20 EUR, 5% if amount spent is <=50 EUR and 10% if amount spent is > 50 EUR
         uint256 result;
         if (_amount <= 20) {
@@ -36,8 +37,12 @@ contract PCToken is ERC20 {
         } else if (_amount > 50) {
             result = _amount.mul(100).div(1000);
         }
-        
+
         approve(owner, result);
         transferFrom(owner, _recipient, result);
     }
+
+    // function earnTokensFromLab()
+
+    // function spendTokensOnPurchase()
 }

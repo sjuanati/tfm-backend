@@ -37,10 +37,8 @@ const checkBalance = async (req, res) => {
 const earnTokensOnPurchase = async (eth_address, total_price) => {
     try {
 
-        // Add 18 decimals to the amount in order to be compliant with the ERC20 18 decimals
-        console.log('price before: ',total_price);
+        // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
         const amount = Web3.utils.toWei(total_price.toString());
-        console.log('after price: ', amount);
 
         Contract.methods.earnTokensOnPurchase(eth_address, amount).send({ from: Cons.BLOCKCHAIN.appOwnerAddress })
             .then(res => {
@@ -55,6 +53,40 @@ const earnTokensOnPurchase = async (eth_address, total_price) => {
         console.log('Error in ethPCToken.js (B) -> ', err);
     }
 }
+
+// const earnTokensOnPurchase = async (eth_address, total_price) => {
+
+//     // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
+//     const amount = Web3.utils.toWei(total_price.toString());
+
+//     // Prepare transaction
+//     const encodedABI = Contract.methods.earnTokensOnPurchase(eth_address, amount).encodeABI();
+//     const nonce = await web3.eth.getTransactionCount(Cons.BLOCKCHAIN.appOwnerAddress);
+//     const tx = {
+//         gas: 1500000,
+//         gasPrice: '30000000000',
+//         from: Cons.BLOCKCHAIN.appOwnerAddress,
+//         data: encodedABI,
+//         chainId: 5777,
+//         to: Cons.BLOCKCHAIN.hashContractAddress,
+//         nonce: nonce,
+//     };
+
+//     // Sign transaction
+//     web3.eth.accounts.signTransaction(tx, Cons.BLOCKCHAIN.appOwnerKey)
+//         .then(signed => {
+//             web3.eth.sendSignedTransaction(signed.rawTransaction)
+//                 .then(async res => {
+//                     console.log('Resultat: ', res);
+//                 })
+//                 .catch(err => {
+//                     console.log('Error in ethPCToken.js (A) -> earnTokensOnPurchase(): ', err);
+//                 });
+//         })
+//         .catch(err => {
+//             console.log('Error in ethPCToken.js (B) -> earnTokensOnPurchase(): ', err);
+//         });
+// }
 
 const earnTokens = async (req, res) => {
     const args = req.query;

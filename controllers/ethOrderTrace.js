@@ -126,9 +126,7 @@ const saveOrderTrace = async (order_id, eth_address) => {
  */
 const saveOrderTraceDB = (params) => {
     return new Promise(async (resolve) => {
-
         try {
-
             // Generate a hash on the Order ID (hashOrderID)
             hashOrderID = generateHashOrderID(params.order_id);
 
@@ -151,14 +149,13 @@ const saveOrderTraceDB = (params) => {
                 params.update_date,
             ]);
 
-            // Save hash on Order ID and Order vales in Ethereum asynchronously
-            saveOrderTraceEth(params.trace_id);
-
-            // Earn tokens for the purchase of Products
-            earnTokensOnPurchase(params.eth_address, params.total_price);
-
-            // Return true if Order data was successfully saved into the DB
-            (res !== 400) ? resolve(true) : resolve(false);
+            // If Order data is successfully saved, call SaveOrderTraceEth asynchronously and return true
+            if (res !== 400) {
+                saveOrderTraceEth(params.trace_id, params.eth_address, params.total_price);
+                resolve(true);
+            } else {
+                resolve(false);
+            }
 
         } catch (err) {
             console.log('Error in ethOrderTrace.js -> saveOrderTraceDB(): ', err);
@@ -172,7 +169,7 @@ const saveOrderTraceDB = (params) => {
  * Returns true if the log was successfully emitted in the Blockchain and the output was successfully saved into the DB
  * @param trace_id ID for the record to be saved into the DB (table <order_trace)
  */
-const saveOrderTraceEth = async (log_id) => {
+const saveOrderTraceEth = async (log_id, eth_address, total_price) => {
 
     // Prepare transaction
     const encodedABI = Contract.methods.saveHash(hashOrderID, hashOrderValue).encodeABI();
@@ -204,6 +201,9 @@ const saveOrderTraceEth = async (log_id) => {
                         update_date,
                     ]);
                     console.log('Resultat: ', res);
+
+                    // Earn tokens for the purchase of Products
+                    earnTokensOnPurchase(eth_address, total_price);
                 })
                 .catch(err => {
                     console.log('Error in ethOrderTrace.js (A) -> saveOrderTraceEth(): ', err);
@@ -263,8 +263,7 @@ const getOrderTraceDB = async (req, res) => {
 
                 const params = {
                     orderID_hash: hashOrderID,
-                    //orderValue_hash: resDB[i].db_hash,
-                    orderValue_hash: hashOrderValue,
+                    orderValue_hash: hashOrderValue,  // resDB[i].db_hash,
                     tx_hash: resDB[i].tx_hash,
                     block_number: resDB[i].block_number,
                 }
@@ -307,7 +306,7 @@ const getOrderTraceEth = (params) => {
                 },
                 fromBlock: params.block_number,
                 //toBlock: params.block_number,
-                //transactionHash: params.tx_hash,
+                transactionHash: params.tx_hash,
             })
                 .then(events => {
                     console.log('Events: ', events);
