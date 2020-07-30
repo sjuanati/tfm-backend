@@ -332,7 +332,6 @@ const setUserProfile = async (req, res) => {
 const getPharmacyProfile = async (req, res) => {
     try {
         const args = req.query;
-        console.log('++ :', args.pharmacy_id)
         logExtra = `pharmacy: ${args.pharmacy_id}`;
         const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_pharmacy_profile.sql`), 'utf8');
         const results = await query(q, 'select', [args.pharmacy_id]);

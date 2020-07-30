@@ -52,7 +52,6 @@ const generateHashOrderID = (order_id) => {
  * Returns a the Order values hash
  * @param params Order values to calculate the hash (trace_id, order_id, order_date, etc)
  */
-
 const generateHashOrderValues = (params) => {
     return (
         '0x' + crypto
@@ -151,7 +150,11 @@ const saveOrderTraceDB = (params) => {
 
             // If Order data is successfully saved, call SaveOrderTraceEth asynchronously and return true
             if (res !== 400) {
-                saveOrderTraceEth(params.trace_id, params.eth_address, params.total_price);
+                saveOrderTraceEth(
+                    params.trace_id, 
+                    params.eth_address, 
+                    params.total_price,
+                    params.order_status);
                 resolve(true);
             } else {
                 resolve(false);
@@ -169,7 +172,7 @@ const saveOrderTraceDB = (params) => {
  * Returns true if the log was successfully emitted in the Blockchain and the output was successfully saved into the DB
  * @param trace_id ID for the record to be saved into the DB (table <order_trace)
  */
-const saveOrderTraceEth = async (log_id, eth_address, total_price) => {
+const saveOrderTraceEth = async (log_id, eth_address, total_price, order_status) => {
 
     // Prepare transaction
     const encodedABI = Contract.methods.saveHash(hashOrderID, hashOrderValue).encodeABI();
@@ -179,7 +182,7 @@ const saveOrderTraceEth = async (log_id, eth_address, total_price) => {
         gasPrice: '30000000000',
         from: Cons.BLOCKCHAIN.appOwnerAddress,
         data: encodedABI,
-        chainId: 5777,
+        chainId: Cons.BLOCKCHAIN.chainId,
         to: Cons.BLOCKCHAIN.hashContractAddress,
         nonce: nonce,
     };
@@ -203,7 +206,7 @@ const saveOrderTraceEth = async (log_id, eth_address, total_price) => {
                     console.log('Resultat: ', res);
 
                     // Earn tokens for the purchase of Products
-                    earnTokensOnPurchase(eth_address, total_price);
+                    if (order_status === 1) earnTokensOnPurchase(eth_address, total_price);
                 })
                 .catch(err => {
                     console.log('Error in ethOrderTrace.js (A) -> saveOrderTraceEth(): ', err);
