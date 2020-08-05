@@ -6,7 +6,8 @@ const moment = require('moment');
 const tz = require('moment-timezone');
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('../shared/query');
-const { earnTokensOnPurchase } = require('../controllers/ethPCToken');
+const { earnTokensOnPurchase } = require('./ethPCToken');
+const { executeTX } = require('./ethUtils');
 
 const env = require('../Environment');
 const Cons = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
@@ -151,8 +152,8 @@ const saveOrderTraceDB = (params) => {
             // If Order data is successfully saved, call SaveOrderTraceEth asynchronously and return true
             if (res !== 400) {
                 saveOrderTraceEth(
-                    params.trace_id, 
-                    params.eth_address, 
+                    params.trace_id,
+                    params.eth_address,
                     params.total_price,
                     params.order_status);
                 resolve(true);
@@ -174,49 +175,34 @@ const saveOrderTraceDB = (params) => {
  */
 const saveOrderTraceEth = async (log_id, eth_address, total_price, order_status) => {
 
-    // Prepare transaction
-    const encodedABI = Contract.methods.saveHash(hashOrderID, hashOrderValue).encodeABI();
-    const nonce = await web3.eth.getTransactionCount(Cons.BLOCKCHAIN.appOwnerAddress);
-    const tx = {
-        gas: 1500000,
-        gasPrice: '30000000000',
-        from: Cons.BLOCKCHAIN.appOwnerAddress,
-        data: encodedABI,
-        chainId: Cons.BLOCKCHAIN.chainId,
-        to: Cons.BLOCKCHAIN.hashContractAddress,
-        nonce: nonce,
+    const params = {
+        encodedABI: Contract.methods.saveHash(hashOrderID, hashOrderValue).encodeABI(),
+        fromAddress: Cons.BLOCKCHAIN.appOwnerAddress,
+        fromAddressKey: Cons.BLOCKCHAIN.appOwnerKey,
+        contractAddress: Cons.BLOCKCHAIN.hashContractAddress,
     };
 
-    // Sign transaction
-    web3.eth.accounts.signTransaction(tx, Cons.BLOCKCHAIN.appOwnerKey)
-        .then(signed => {
-            web3.eth.sendSignedTransaction(signed.rawTransaction)
-                .then(async res => {
-                    // Save returned tx hash & block number from Ethereum into the DB (table order_trace)
-                    const txhash = res.transactionHash;
-                    const blockNumber = res.blockNumber;
-                    const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_trace.sql`), 'utf8');
-                    const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
-                    await query(q, 'update', [
-                        log_id,
-                        txhash,
-                        blockNumber,
-                        update_date,
-                    ]);
-                    console.log('Resultat: ', res);
+    const { result, error, output } = await executeTX(params);
 
-                    // Earn tokens for the purchase of Products
-                    if (order_status === 1) earnTokensOnPurchase(eth_address, total_price);
-                })
-                .catch(err => {
-                    console.log('Error in ethOrderTrace.js (A) -> saveOrderTraceEth(): ', err);
-                });
-        })
-        .catch(err => {
-            console.log('Error in ethOrderTrace.js (B) -> saveOrderTraceEth(): ', err);
-            //TODO: if any error in Blockchain (ex: wrong signature), User won't be aware. Warning?
-        });
+    if (result) {
+        // Save returned tx hash & block number from Ethereum into the DB (table order_trace)
+        const q = fs.readFileSync(path.join(__dirname, `/../queries/update/update_order_trace.sql`), 'utf8');
+        const update_date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
+        await query(q, 'update', [
+            log_id,
+            output.transactionHash,
+            output.blockNumber,
+            update_date,
+        ]);
+        console.log('Resultat: ', output);
+
+        // Earn tokens for the purchase of Products
+        if (order_status === 1) earnTokensOnPurchase('0x866863Adc9732995926Eb7CDa0e811e0e3FE419A', eth_address, total_price);
+    } else {
+        console.log('Errorin :', error);
+    }
 }
+
 
 /**
  * @dev Parses error message and returns a 'more human' error description

@@ -6,6 +6,7 @@ const moment = require('moment');
 const tz = require('moment-timezone');
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('../shared/query');
+const { executeTX } = require('./ethUtils');
 
 const env = require('../Environment');
 const Cons = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
@@ -31,74 +32,82 @@ const checkBalance = async (req, res) => {
             console.log('Error in ethPCToken.js (A) -> checkBalance(): ', err);
             res.status(400).json('Error in ethPCToken.js -> checkBalance()');
         });
-
 }
 
-const earnTokensOnPurchase = async (eth_address, total_price) => {
-    try {
-
-        // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
-        const amount = Web3.utils.toWei(total_price.toString());
-
-        Contract.methods.earnTokensOnPurchase(eth_address, amount).send({ from: Cons.BLOCKCHAIN.appOwnerAddress })
-            .then(res => {
-                console.log('Resultat: ', res);
-                console.log('Events approval: ', res.events.Approval);
-                //console.log('Events transfer: ', res.events.Transfer.returnValues);
-            })
-            .catch(err => {
-                console.log('Error in ethPCToken.js (A) -> checkBalance(): ', err);
-            });
-    } catch (err) {
-        console.log('Error in ethPCToken.js (B) -> ', err);
-    }
-}
-
-// const earnTokensOnPurchase = async (eth_address, total_price) => {
-
-//     // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
-//     const amount = Web3.utils.toWei(total_price.toString());
-
-//     // Prepare transaction
-//     const encodedABI = Contract.methods.earnTokensOnPurchase(eth_address, amount).encodeABI();
-//     const nonce = await web3.eth.getTransactionCount(Cons.BLOCKCHAIN.appOwnerAddress);
-//     const tx = {
-//         gas: 1500000,
-//         gasPrice: '30000000000',
-//         from: Cons.BLOCKCHAIN.appOwnerAddress,
-//         data: encodedABI,
-//         chainId: 5777,
-//         to: Cons.BLOCKCHAIN.hashContractAddress,
-//         nonce: nonce,
-//     };
-
-//     // Sign transaction
-//     web3.eth.accounts.signTransaction(tx, Cons.BLOCKCHAIN.appOwnerKey)
-//         .then(signed => {
-//             web3.eth.sendSignedTransaction(signed.rawTransaction)
-//                 .then(async res => {
-//                     console.log('Resultat: ', res);
-//                 })
-//                 .catch(err => {
-//                     console.log('Error in ethPCToken.js (A) -> earnTokensOnPurchase(): ', err);
-//                 });
-//         })
-//         .catch(err => {
-//             console.log('Error in ethPCToken.js (B) -> earnTokensOnPurchase(): ', err);
-//         });
-// }
-
-const earnTokens = async (req, res) => {
-    const args = req.query;
-
+const showEarnTokens = async (req, res) => {
+    //const args = req.query;
     const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_earn_tokens.sql`), 'utf8');
     const results = await query(q, 'select', []);
     (results === 400) ? res.status(202).send('') : res.status(201).send(results);
 }
 
+const buyTokens = async (req, res) => {
+    const args = req.query;
+
+    // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
+    const amount = Web3.utils.toWei(args.amount.toString());
+
+    const params = {
+        encodedABI: Contract.methods.buyTokens(args.recipient, amount).encodeABI(),
+        fromAddress: Cons.BLOCKCHAIN.appOwnerAddress,
+        fromAddressKey: Cons.BLOCKCHAIN.appOwnerKey,
+        contractAddress: Cons.BLOCKCHAIN.pctokenContractAddress,
+    };
+
+    const { result, error } = await executeTX(params);
+
+    (result) ? res.status(200).json('OK') : res.status(400).json(error);
+}
+
+// TODO1: ***** INTEGRATE buyTokens with SpendTokens in the same function, and add buy or spend as param
+// TODO2: ***** Manage User & Pharmacy's private keys somewhere (and securely)
+const spendTokens = async (req, res) => {
+    const args = req.query;
+
+    // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
+    const amount = Web3.utils.toWei(args.amount.toString());
+
+    const params = {
+        encodedABI: Contract.methods.spendTokensOnPurchase(args.recipient, amount).encodeABI(),
+        fromAddress: args.sender,
+        fromAddressKey: '0212bcffd0d67510871a05ac095ef1620ea1201bee9d265a03c6fb6a16f3ddee',
+        contractAddress: Cons.BLOCKCHAIN.pctokenContractAddress,
+    };
+
+    const { result, error } = await executeTX(params);
+
+    (result) ? res.status(200).json('OK') : res.status(400).json(error);
+}
+
+const earnTokensOnPurchase = async (eth_address_pharmacy, eth_address_user, total_price) => {
+    try {
+        // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
+        const amount = Web3.utils.toWei(total_price.toString());
+
+        const params = {
+            encodedABI: Contract.methods.earnTokensOnPurchase(
+                eth_address_pharmacy, 
+                eth_address_user, 
+                amount).encodeABI(),
+            fromAddress: Cons.BLOCKCHAIN.appOwnerAddress,
+            fromAddressKey: Cons.BLOCKCHAIN.appOwnerKey,
+            contractAddress: Cons.BLOCKCHAIN.pctokenContractAddress,
+        };
+
+        const { result, error, output } = await executeTX(params);
+
+    } catch (err) {
+        console.log('Error on ethPCToken.js -> earnTokensOnPurchase(): ', err)
+    }
+}
+
+
+
 module.exports = {
     checkBalance,
+    showEarnTokens,
+    buyTokens,
+    spendTokens,
     earnTokensOnPurchase,
-    earnTokens
 }
 

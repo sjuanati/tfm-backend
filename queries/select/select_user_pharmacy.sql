@@ -12,7 +12,8 @@
 
 SELECT
     p.pharmacy_id,
-    p.pharmacy_desc
+    p.pharmacy_desc,
+	p.eth_address
 FROM 
 	public.user u,
 	public.pharmacy p
