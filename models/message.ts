@@ -1,8 +1,8 @@
+export {};
 const Sequelize = require('sequelize');
-//const db = require('../controllers/database');
 const env = require('../Environment');
 const Cons = require((env() === 'PROD') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
-const db = (new Sequelize(Cons.DB_SEQ.db, Cons.DB_SEQ.user, Cons.DB_SEQ.password, Cons.DB_SEQ.params));
+const db = new Sequelize(Cons.DB_SEQ.db, Cons.DB_SEQ.user, Cons.DB_SEQ.password, Cons.DB_SEQ.params);
 
 const Message = db.define('message', {
   message: {
@@ -43,7 +43,7 @@ const Message = db.define('message', {
   tableName: 'message'
 });
 
-Message.associate = (models) => {
+Message.associate = (models: any) => {
   Message.belongsTo(models.Chat, {
     foreignKey: {
       name: 'chatId',

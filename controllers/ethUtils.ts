@@ -1,13 +1,19 @@
 const Web3 = require('web3');
-const env = require('../Environment');
+import env = require('../Environment');
 const Cons = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
 
 // Blockchain settings (Ganache)
 const web3 = new Web3(Cons.BLOCKCHAIN.URL_HTTP);
-//const web3ws = new Web3(Cons.BLOCKCHAIN.URL_WS);
 
-
-const executeTX = (params) => {
+/**
+ * @dev xxxx
+ * YYYY
+ * @param params.fromAddress XXX
+ * @param params.encodedABI YYY
+ * @param params.contractAddress ZZZ
+ * @param params.fromAddressKey  RRR    
+ */
+const executeTX = (params: any) => {
     return new Promise(async (resolve) => {
 
         // Prepare transaction
@@ -24,18 +30,18 @@ const executeTX = (params) => {
 
         // Sign transaction
         web3.eth.accounts.signTransaction(tx, params.fromAddressKey)
-            .then(signed => {
+            .then((signed: any) => {
                 // Send transaction
                 web3.eth.sendSignedTransaction(signed.rawTransaction)
-                    .then(async res => {
+                    .then(async (res: any) => {
                         resolve({ result: true, error: null, output: res });
                     })
-                    .catch(err => {
+                    .catch((err: string) => {
                         console.log('Error in ethUtils.js (A) -> executeTX(): ', err);
                         resolve({ result: false, error: err, output: null });
                     });
             })
-            .catch(err => {
+            .catch((err: string) => {
                 console.log('Error in ethUtils.js (B) -> executeTX(): ', err);
                 resolve({ result: false, error: err, output: null });
             });

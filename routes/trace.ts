@@ -1,4 +1,4 @@
-let express = require('express');
+import * as express from 'express';
 let router = express.Router();
 let ethOrderTrace = require('../controllers/ethOrderTrace');
 let md_auth = require('../controllers/authenticated');

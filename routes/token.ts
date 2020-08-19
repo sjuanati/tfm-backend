@@ -1,4 +1,4 @@
-let express = require('express');
+import * as express from 'express';
 let router = express.Router();
 let ethPCToken = require('../controllers/ethPCToken');
 let md_auth = require('../controllers/authenticated');
@@ -9,4 +9,3 @@ router.get('/spendTokens', md_auth.ensureAuth, ethPCToken.spendTokens);
 router.get('/buyTokens', md_auth.ensureAuth, ethPCToken.buyTokens);
 
 module.exports = router;
-

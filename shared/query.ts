@@ -1,6 +1,4 @@
-const pg = require('pg');
-const fs = require('fs');
-const path = require('path');
+import * as pg from 'pg';
 const logger = require('../shared/logRecorder');
 const env = require('../Environment');
 const Constants = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
@@ -8,7 +6,9 @@ const Constants = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '.
 // DB connection params
 const pool = new pg.Pool(Constants.DB);
 
-const query = async (q, op, args) => {
+type Operation = 'insert' | 'update' | 'select' | undefined; 
+
+const query = async (q: string, op: Operation, args: any) => {
     try {
         const client = await pool.connect();
         try {

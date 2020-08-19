@@ -1,5 +1,7 @@
-const fs = require('fs');
-const path = require('path');
+//import express = require('express');
+import * as express from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
 const Web3 = require('web3');
 const crypto = require('crypto');
 const moment = require('moment');
@@ -14,6 +16,26 @@ const Cons = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Con
 
 let hashOrderID = '';
 let hashOrderValue = '';
+interface OrderInput {
+        trace_id: string,
+        order_id: string,
+        order_id_app: number,
+        order_status: number,
+        order_date: string,
+        pharmacy_id: number,
+        user_id: number,
+        order_items: number[],
+        product_ids: number[],
+        update_date: Date,
+        total_price: number,
+        eth_address: string,
+}
+interface OrderOutput {
+    orderID_hash: string,
+    orderValue_hash: string,
+    tx_hash: string
+    block_number: number
+}
 
 // Blockchain settings
 const OPTIONS = {
@@ -37,7 +59,7 @@ Contract.options.address = Cons.BLOCKCHAIN.hashContractAddress;
  * Returns a the Order ID hash
  * @param order_id ID of the target Order
  */
-const generateHashOrderID = (order_id) => {
+const generateHashOrderID = (order_id: string) => {
     return (
         '0x' + crypto
             .createHash('sha256')
@@ -53,7 +75,7 @@ const generateHashOrderID = (order_id) => {
  * Returns a the Order values hash
  * @param params Order values to calculate the hash (trace_id, order_id, order_date, etc)
  */
-const generateHashOrderValues = (params) => {
+const generateHashOrderValues = (params: OrderInput) => {
     return (
         '0x' + crypto
             .createHash('sha256')
@@ -79,7 +101,7 @@ const generateHashOrderValues = (params) => {
  * Returns a boolean value indicating whether the operation succeeded.
  * @param order_id ID of created/updated Order
  */
-const saveOrderTrace = async (order_id, eth_address) => {
+const saveOrderTrace = async (order_id: string, eth_address: string) => {
 
     // Get Order data from the DB
     const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order.sql`), 'utf8');
@@ -124,8 +146,8 @@ const saveOrderTrace = async (order_id, eth_address) => {
  * Returns a boolean value indicating whether the operation succeeded.
  * @param order_id ID of created/updated Order
  */
-const saveOrderTraceDB = (params) => {
-    return new Promise(async (resolve) => {
+const saveOrderTraceDB = (params: OrderInput) => {
+    return new Promise<boolean>(async (resolve) => {
         try {
             // Generate a hash on the Order ID (hashOrderID)
             hashOrderID = generateHashOrderID(params.order_id);
@@ -173,7 +195,7 @@ const saveOrderTraceDB = (params) => {
  * Returns true if the log was successfully emitted in the Blockchain and the output was successfully saved into the DB
  * @param trace_id ID for the record to be saved into the DB (table <order_trace)
  */
-const saveOrderTraceEth = async (log_id, eth_address, total_price, order_status) => {
+const saveOrderTraceEth = async (log_id: string, eth_address: string, total_price: number, order_status: number) => {
 
     const params = {
         encodedABI: Contract.methods.saveHash(hashOrderID, hashOrderValue).encodeABI(),
@@ -209,7 +231,7 @@ const saveOrderTraceEth = async (log_id, eth_address, total_price, order_status)
  * Returns a description of the error message
  * @param err Error string provided by the System
  */
-const decodeError = (err) => {
+const decodeError = (err: string) => {
 
     err = err.toLowerCase();
     if (err.includes('invalid arrayify value'))
@@ -233,7 +255,7 @@ const decodeError = (err) => {
  * @param req Input parameters received from the Front-End: Order ID
  * @param res Output parameters to be sent to the Front-End: Order ID hash, Order values hash, Transaction hash, Block number
  */
-const getOrderTraceDB = async (req, res) => {
+const getOrderTraceDB = async (req: express.Request, res: express.Response) => {
     try {
 
         // Get Order data from the DB (table order_trace)
@@ -242,8 +264,8 @@ const getOrderTraceDB = async (req, res) => {
         const resDB = await query(q, 'select', [args.order_id]);
 
         if (resDB && resDB !== 400) {
-
-            hashOrderID = generateHashOrderID(args.order_id);
+            console.log('args:', args);
+            hashOrderID = generateHashOrderID(String(args.order_id));
 
             // For every Order change stored in table <order_trace>, compare the Order data value vs. the one stored in the Blockchain
             for (let i = 0; i < resDB.length; i++) {
@@ -284,8 +306,8 @@ const getOrderTraceDB = async (req, res) => {
  * @param params.block_number       Block number where the data was stored in the Blockchain logs
  * 
  */
-const getOrderTraceEth = (params) => {
-    return new Promise(async (resolve) => {
+const getOrderTraceEth = (params: OrderOutput) => {
+    return new Promise<{ result: boolean, error: string }>(async (resolve) => {
 
         try {
             ContractWS.getPastEvents('SaveHash', {
@@ -297,13 +319,14 @@ const getOrderTraceEth = (params) => {
                 //toBlock: params.block_number,
                 transactionHash: params.tx_hash,
             })
-                .then(events => {
+                .then((events: any) => {
                     console.log('Events: ', events);
                     (events.length > 0)
-                        ? resolve({ result: true, error: null })
+                        ? resolve({ result: true, error: '' })
+                        //? resolve({ result: true, error: null })
                         : resolve({ result: false, error: 'Hash not found' });
                 })
-                .catch(err => {
+                .catch((err: string) => {
                     console.log('Error in ethOrderTrace.js (A) -> getOrderTraceEth()', err);
                     resolve({ result: false, error: err });
                 });
@@ -323,14 +346,14 @@ const getOrderTraceEth = (params) => {
  * @param req Input parameters received from the Front-End: All required Order values to perform the hash validation in the Blockchain
  * @param res Output parameters to be sent to the Front-End: Status ('OK', 'NOK' or 'PENDING')
  */
-const checkGlobalOrderTrace = async (req, res) => {
+const checkGlobalOrderTrace = async (req: express.Request, res: express.Response) => {
     try {
         const args = req.query;
         const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_order_trace.sql`), 'utf8');
         const resDB = await query(q, 'select', [args.order_id]);
         let outcome = 'OK';
 
-        hashOrderID = generateHashOrderID(args.order_id);
+        hashOrderID = generateHashOrderID(String(args.order_id));
 
         for (let i = 0; i < resDB.length; i++) {
 

@@ -1,5 +1,5 @@
+export {};
 const Sequelize = require('sequelize');
-// const db = require('../controllers/database');
 const env = require('../Environment');
 const Cons = require((env() === 'PROD') ? '/home/ubuntu/.ssh/Constants' : '../Constants');
 const db = (new Sequelize(Cons.DB_SEQ.db, Cons.DB_SEQ.user, Cons.DB_SEQ.password, Cons.DB_SEQ.params));
@@ -59,7 +59,7 @@ const Order = db.define('Order', {
   timestamps: false
 });
 
-Order.associate = (models) => {
+Order.associate = (models: any) => {
   Order.belongsTo(models.User, {
     foreignKey: {
       name: 'user_id',

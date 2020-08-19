@@ -3,6 +3,7 @@
 node_modules/
 logs/
 uploads/
+build/
 npm-debug.log
 yarn-error.log
 Constants.js

@@ -1,4 +1,4 @@
-const fs = require('fs');
+import * as fs from 'fs';
 const path = require('path');
 const moment = require('moment');
 const tz = require('moment-timezone');
@@ -13,7 +13,7 @@ const loadProducts = () => {
         const input = JSON.parse(fs.readFileSync(path.join(__dirname, `/../data/products.json`), 'utf8'));
         const q = fs.readFileSync(path.join(__dirname, `/../queries/load/load_products.sql`), 'utf8');
 
-        input.forEach(async elem => {
+        input.forEach(async (elem: any) => {
             console.log(elem)
             const date = moment().tz('Europe/Madrid').format('YYYY-MM-DD H:mm:ss');
             let params = Object.keys(elem).map(function(k){return elem[k]});
