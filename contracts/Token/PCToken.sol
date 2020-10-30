@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: TBC
 
-pragma solidity ^0.6.2;
+pragma solidity ^0.7.0;
 
 import "./ERC20.sol";
 
@@ -38,15 +38,6 @@ contract PCToken is ERC20 {
      */
     function earnTokensOnPurchase(address _sender, address _recipient, uint256 _amount) external isOwner {
         require(_amount > 0, "Amount must be greater than 0");
-
-        // uint256 result;
-        // if (_amount < (20 * _dec)) {
-        //     result = _amount.mul(50).div(10000);
-        // } else if (_amount <= (50 * _dec)) {
-        //     result = _amount.mul(100).div(10000);
-        // } else if (_amount > (50 * _dec)) {
-        //     result = _amount.mul(150).div(10000);
-        // }
 
         uint256 result;
         if (_amount < (_dec.mul(20))) {

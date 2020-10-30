@@ -56,7 +56,7 @@ Contract.options.address = Cons.BLOCKCHAIN.hashContractAddress;
 
 /**
  * @dev Calculates the hash (SHA256) of the Order ID
- * Returns a the Order ID hash
+ * Returns the Order ID hash
  * @param order_id ID of the target Order
  */
 const generateHashOrderID = (order_id: string) => {
