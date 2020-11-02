@@ -67,11 +67,10 @@ const spendTokens = async (req: express.Request, res: express.Response) => {
 
     // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
     const amount = Web3.utils.toWei(String(args.amount));
-
     const params = {
         encodedABI: Contract.methods.spendTokensOnPurchase(args.recipient, amount).encodeABI(),
         fromAddress: args.sender,
-        fromAddressKey: '0212bcffd0d67510871a05ac095ef1620ea1201bee9d265a03c6fb6a16f3ddee',
+        fromAddressKey: args.pk,
         contractAddress: Cons.BLOCKCHAIN.pctokenContractAddress,
     };
 

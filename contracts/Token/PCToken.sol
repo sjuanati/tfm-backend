@@ -76,9 +76,7 @@ contract PCToken is ERC20 {
 
     /**
      * @dev Earn tokens when a User shares personal data (anonymously) to a Laboratory
-     * ...
-     * @param xxx       xxxx
-     * @param yyy       fdfdf
+     * TO BE IMPLEMENTED IF REAL USE CASE ARISES
      */
     // function earnTokensFromLab()
 

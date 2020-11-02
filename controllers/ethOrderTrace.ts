@@ -45,9 +45,6 @@ const OPTIONS = {
 };
 const web3 = new Web3(Cons.BLOCKCHAIN.URL_HTTP, null, OPTIONS);
 const web3ws = new Web3(Cons.BLOCKCHAIN.URL_WS);
-// web3.transactionConfirmationBlocks = 1;
-// web3.eth.transactionConfirmationBlocks = 1;
-// web3.shh.transactionConfirmationBlocks = 1;
 const ABI_DATA = fs.readFileSync(path.join(__dirname, `/../contracts/Trace/OrderTrace.abi`), 'utf8');
 const Contract = new web3.eth.Contract(JSON.parse(ABI_DATA));
 const ContractWS = new web3ws.eth.Contract(JSON.parse(ABI_DATA), Cons.BLOCKCHAIN.hashContractAddress);
@@ -72,7 +69,7 @@ const generateHashOrderID = (order_id: string) => {
 
 /**
  * @dev Calculates the hash (SHA256) of the Order values
- * Returns a the Order values hash
+ * @returns Order values hash
  * @param params Order values to calculate the hash (trace_id, order_id, order_date, etc)
  */
 const generateHashOrderValues = (params: OrderInput) => {
@@ -222,8 +219,8 @@ const saveOrderTraceEth = async (log_id: string, eth_address: string, total_pric
         if (order_status === 1) earnTokensOnPurchase('0x866863Adc9732995926Eb7CDa0e811e0e3FE419A', eth_address, total_price);
     } else {
         console.log('Errorin :', error);
-    }
-}
+    };
+};
 
 
 /**
@@ -245,7 +242,7 @@ const decodeError = (err: string) => {
     else
         return 'Unrecognized error';
 
-}
+};
 
 /**
  * @dev Given an Order, it recreates the hash on the Order ID and Order values for every Order change stored in 
@@ -277,7 +274,7 @@ const getOrderTraceDB = async (req: express.Request, res: express.Response) => {
                     orderValue_hash: hashOrderValue,  // resDB[i].db_hash,
                     tx_hash: resDB[i].tx_hash,
                     block_number: resDB[i].block_number,
-                }
+                };
 
                 if (params.tx_hash && params.block_number) {
                     const { result, error } = await getOrderTraceEth(params);
@@ -285,17 +282,17 @@ const getOrderTraceDB = async (req: express.Request, res: express.Response) => {
                     result ? resDB[i].checksum = 'OK' : resDB[i].checksum = 'NOK';
                 } else {
                     resDB[i].checksum = 'PENDING';
-                }
+                };
 
                 console.log('item ', i, ' -> ', resDB[i]);
-            }
-        }
+            };
+        };
 
         res.status(200).json(resDB);
     } catch (err) {
         console.log('Error at ethOrderTrace.js -> getOrderTraceDB() :', err);
-    }
-}
+    };
+};
 
 /**
  * @dev Check if an Order ID hash and Order values hash is stored in the Blockchain logs
@@ -316,14 +313,12 @@ const getOrderTraceEth = (params: OrderOutput) => {
                     _orderValue: params.orderValue_hash,
                 },
                 fromBlock: params.block_number,
-                //toBlock: params.block_number,
                 transactionHash: params.tx_hash,
             })
                 .then((events: any) => {
                     console.log('Events: ', events);
                     (events.length > 0)
                         ? resolve({ result: true, error: '' })
-                        //? resolve({ result: true, error: null })
                         : resolve({ result: false, error: 'Hash not found' });
                 })
                 .catch((err: string) => {
