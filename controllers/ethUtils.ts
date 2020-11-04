@@ -6,12 +6,14 @@ const Cons = require((env() === 'AWS') ? '/home/ubuntu/.ssh/Constants' : '../Con
 const web3 = new Web3(Cons.BLOCKCHAIN.URL_HTTP);
 
 /**
- * @dev xxxx
- * YYYY
- * @param params.fromAddress XXX
- * @param params.encodedABI YYY
- * @param params.contractAddress ZZZ
- * @param params.fromAddressKey  RRR    
+ * @dev Generic function to execute Ethereum transactions with signature
+ * @returns @result: true if transaction was executed successfuly, or false otherwise
+ * @returns @error: error description if transaction failed
+ * @returns @res: transaction response  
+ * @param params.fromAddress        From account
+ * @param params.fromAddressKey     From private key   
+ * @param params.encodedABI         Contract data 
+ * @param params.contractAddress    Contract address
  */
 const executeTX = (params: any) => {
     return new Promise(async (resolve) => {

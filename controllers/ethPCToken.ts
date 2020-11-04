@@ -33,14 +33,13 @@ const checkBalance = async (req: express.Request, res: express.Response) => {
             console.log('Error in ethPCToken.js (A) -> checkBalance(): ', err);
             res.status(400).json('Error in ethPCToken.js -> checkBalance()');
         });
-}
+};
 
 const showEarnTokens = async (req: express.Request, res: express.Response) => {
-    //const args = req.query;
     const q = fs.readFileSync(path.join(__dirname, `/../queries/select/select_earn_tokens.sql`), 'utf8');
     const results = await query(q, 'select', []);
     (results === 400) ? res.status(202).send('') : res.status(201).send(results);
-}
+};
 
 const buyTokens = async (req: express.Request, res: express.Response) => {
     const args = req.query;
@@ -58,15 +57,13 @@ const buyTokens = async (req: express.Request, res: express.Response) => {
     const { result, error } = await executeTX(params);
 
     (result) ? res.status(200).json('OK') : res.status(400).json(error);
-}
+};
 
-// TODO1: ***** INTEGRATE buyTokens with SpendTokens in the same function, and add buy or spend as param
-// TODO2: ***** Manage User & Pharmacy's private keys somewhere (and securely)
 const spendTokens = async (req: express.Request, res: express.Response) => {
     const args = req.query;
 
-    // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
     const amount = Web3.utils.toWei(String(args.amount));
+    
     const params = {
         encodedABI: Contract.methods.spendTokensOnPurchase(args.recipient, amount).encodeABI(),
         fromAddress: args.sender,
@@ -77,11 +74,10 @@ const spendTokens = async (req: express.Request, res: express.Response) => {
     const { result, error } = await executeTX(params);
 
     (result) ? res.status(200).json('OK') : res.status(400).json(error);
-}
+};
 
 const earnTokensOnPurchase = async (eth_address_pharmacy: string, eth_address_user: string, total_price: number) => {
     try {
-        // Add 18 decimals to the amount in order to be compliant with the 18 decimals in the ERC20 contract
         const amount = Web3.utils.toWei(total_price.toString());
 
         const params = {
@@ -97,9 +93,9 @@ const earnTokensOnPurchase = async (eth_address_pharmacy: string, eth_address_us
         const { result, error, output } = await executeTX(params);
 
     } catch (err) {
-        console.log('Error on ethPCToken.js -> earnTokensOnPurchase(): ', err)
-    }
-}
+        console.log('Error on ethPCToken.js -> earnTokensOnPurchase(): ', err);
+    };
+};
 
 module.exports = {
     checkBalance,
@@ -107,5 +103,5 @@ module.exports = {
     buyTokens,
     spendTokens,
     earnTokensOnPurchase,
-}
+};
 

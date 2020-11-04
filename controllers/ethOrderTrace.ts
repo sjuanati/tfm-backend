@@ -95,7 +95,7 @@ const generateHashOrderValues = (params: OrderInput) => {
  * 1) Gets Order data from the DB with the latest status
  * 2) Creates two arrays (order items and products) to save them into array fields in the DB (table <order_trace>)
  * 3) Calls two functions in order to save all data in the DB (table <order_trace>) and Blockchain (through logs)
- * Returns a boolean value indicating whether the operation succeeded.
+ * @returns a boolean value indicating whether the operation succeeded.
  * @param order_id ID of created/updated Order
  */
 const saveOrderTrace = async (order_id: string, eth_address: string) => {
@@ -189,7 +189,7 @@ const saveOrderTraceDB = (params: OrderInput) => {
 
 /**
  * @dev Calls method 'saveHash' from contract <OrderTrace> and saves the hashOrderID and hashOrderValue in the Blockchain as logs
- * Returns true if the log was successfully emitted in the Blockchain and the output was successfully saved into the DB
+ * @returns true if the log was successfully emitted in the Blockchain and the output was successfully saved into the DB
  * @param trace_id ID for the record to be saved into the DB (table <order_trace)
  */
 const saveOrderTraceEth = async (log_id: string, eth_address: string, total_price: number, order_status: number) => {
@@ -225,7 +225,7 @@ const saveOrderTraceEth = async (log_id: string, eth_address: string, total_pric
 
 /**
  * @dev Parses error message and returns a 'more human' error description
- * Returns a description of the error message
+ * @returns a description of the error message
  * @param err Error string provided by the System
  */
 const decodeError = (err: string) => {
@@ -248,7 +248,7 @@ const decodeError = (err: string) => {
  * @dev Given an Order, it recreates the hash on the Order ID and Order values for every Order change stored in 
  * the DB (table <order_trace), and calls function 'getOrderTraceEth' to compare these values with the ones 
  * stored in the Blockchain
- * Returns true if hashes match
+ * @returns true if hashes match
  * @param req Input parameters received from the Front-End: Order ID
  * @param res Output parameters to be sent to the Front-End: Order ID hash, Order values hash, Transaction hash, Block number
  */
@@ -296,7 +296,7 @@ const getOrderTraceDB = async (req: express.Request, res: express.Response) => {
 
 /**
  * @dev Check if an Order ID hash and Order values hash is stored in the Blockchain logs
- * Returns true if Order ID hash and Order values hash are found
+ * @returns true if Order ID hash and Order values hash are found
  * @param params.orderID_hash       Filter value (Order ID hash)
  * @param params.orderValue_hash    Filter value (Order values hash)
  * @param params.tx_hash            Transaction hash where the data was stored in the Blockchain logs

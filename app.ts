@@ -82,22 +82,22 @@ switch (env()) {
     case 'AWS':
         app.listen(3000);
         console.log('Back-end (Non-SSL yet) running on port 3000');
-        // try {
-        //     const privateKey = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/privkey.pem', 'utf8');
-        //     const certificate = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/cert.pem', 'utf8');
-        //     const ca = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/chain.pem', 'utf8');
-        //     const credentials = {
-        //         key: privateKey,
-        //         cert: certificate,
-        //         ca: ca
-        //     };
-        //     const httpsServer = https.createServer(credentials, app);
-        //     httpsServer.listen(3000, () => {
-        //         console.log('Back-end (SSL) running on port 3000');
-        //     });
-        // } catch (err) {
-        //     console.log('Certificate not found. Is NodeJs running at AWS? ', err);
-        // }
+        try {
+            const privateKey = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/privkey.pem', 'utf8');
+            const certificate = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/cert.pem', 'utf8');
+            const ca = fs.readFileSync('/etc/letsencrypt/live/doctormax.eu/chain.pem', 'utf8');
+            const credentials = {
+                key: privateKey,
+                cert: certificate,
+                ca: ca
+            };
+            const httpsServer = https.createServer(credentials, app);
+            httpsServer.listen(3000, () => {
+                console.log('Back-end (SSL) running on port 3000');
+            });
+        } catch (err) {
+            console.log('Certificate not found. Is NodeJs running at AWS? ', err);
+        }
         break;
     default:
         console.log('No environment to run the back-end');
