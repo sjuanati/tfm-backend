@@ -1,9 +1,9 @@
 const env = () => {
 
-    // Simulation
+    // Simulation - HTTP
     return 'LOCAL';
 
-    // Production
+    // Production - HTTPS
     //return 'AWS';
 }
 
